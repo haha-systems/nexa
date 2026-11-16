@@ -30,6 +30,8 @@ M0–M6 are implemented and tested. The local Slice 0 workflow now parses source
 
 ## Completion evidence
 
+The [validation record](validation/slice0.md) captures the full checks and fresh-checkout demonstration, with the actual six-case fixture report.
+
 The gates are exercised by [source tests](../tests/source.rs), [runtime tests](../tests/runtime.rs), [memory tests](../tests/memory.rs), [blueprint tests](../tests/blueprint.rs), [reuse tests](../tests/reuse.rs), and the [subprocess acceptance suite](../tests/acceptance.rs). [Inspection CLI tests](../tests/inspection_cli.rs) cover bounded pagination, cursor validity, and projection. The [demo](slice0-demo.md) reproduces the complete workflow; the [code walkthrough](slice0-walkthrough.md) explains the Rust boundaries.
 
 ## Order and dependencies

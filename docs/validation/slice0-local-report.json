@@ -1,0 +1,266 @@
+{
+  "allow": [
+    "stdout"
+  ],
+  "cases": [
+    {
+      "actual": {
+        "exit_code": 0,
+        "outcome": {
+          "kind": "Succeeded",
+          "value": {
+            "type": "Unit",
+            "value": null
+          }
+        },
+        "stdout": [
+          72,
+          101,
+          108,
+          108,
+          111,
+          44,
+          32,
+          65,
+          100,
+          97,
+          33,
+          10
+        ]
+      },
+      "allow": [
+        "stdout"
+      ],
+      "detail": "matched expected stdout, result, status, and exit code",
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "stdout": "Hello, Ada!\n"
+      },
+      "name": "trimmed-name",
+      "passed": true
+    },
+    {
+      "actual": {
+        "exit_code": 0,
+        "outcome": {
+          "kind": "Succeeded",
+          "value": {
+            "type": "Unit",
+            "value": null
+          }
+        },
+        "stdout": [
+          72,
+          101,
+          108,
+          108,
+          111,
+          44,
+          32,
+          65,
+          100,
+          97,
+          33,
+          10
+        ]
+      },
+      "allow": [
+        "stdout"
+      ],
+      "detail": "matched expected stdout, result, status, and exit code",
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "stdout": "Hello, Ada!\n"
+      },
+      "name": "ascii-whitespace",
+      "passed": true
+    },
+    {
+      "actual": {
+        "exit_code": 0,
+        "outcome": {
+          "kind": "Succeeded",
+          "value": {
+            "type": "Unit",
+            "value": null
+          }
+        },
+        "stdout": [
+          72,
+          101,
+          108,
+          108,
+          111,
+          44,
+          32,
+          33,
+          10
+        ]
+      },
+      "allow": [
+        "stdout"
+      ],
+      "detail": "matched expected stdout, result, status, and exit code",
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "stdout": "Hello, !\n"
+      },
+      "name": "empty-name",
+      "passed": true
+    },
+    {
+      "actual": {
+        "exit_code": 0,
+        "outcome": {
+          "kind": "Succeeded",
+          "value": {
+            "type": "Unit",
+            "value": null
+          }
+        },
+        "stdout": [
+          72,
+          101,
+          108,
+          108,
+          111,
+          44,
+          32,
+          90,
+          111,
+          195,
+          171,
+          33,
+          10
+        ]
+      },
+      "allow": [
+        "stdout"
+      ],
+      "detail": "matched expected stdout, result, status, and exit code",
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "stdout": "Hello, Zoë!\n"
+      },
+      "name": "unicode-name",
+      "passed": true
+    },
+    {
+      "actual": {
+        "exit_code": 0,
+        "outcome": {
+          "kind": "Succeeded",
+          "value": {
+            "type": "Unit",
+            "value": null
+          }
+        },
+        "stdout": [
+          72,
+          101,
+          108,
+          108,
+          111,
+          44,
+          32,
+          194,
+          160,
+          65,
+          100,
+          97,
+          194,
+          160,
+          33,
+          10
+        ]
+      },
+      "allow": [
+        "stdout"
+      ],
+      "detail": "matched expected stdout, result, status, and exit code",
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "stdout": "Hello,  Ada !\n"
+      },
+      "name": "nonbreaking-space",
+      "passed": true
+    },
+    {
+      "actual": {
+        "exit_code": 0,
+        "outcome": {
+          "kind": "Succeeded",
+          "value": {
+            "type": "Unit",
+            "value": null
+          }
+        },
+        "stdout": [
+          72,
+          101,
+          108,
+          108,
+          111,
+          44,
+          32,
+          65,
+          100,
+          97,
+          33,
+          10
+        ]
+      },
+      "allow": [
+        "stdout"
+      ],
+      "detail": "matched expected stdout, result, status, and exit code",
+      "expected": {
+        "exit_code": 0,
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "stdout": "Hello, Ada!\n"
+      },
+      "name": "vertical-tab",
+      "passed": true
+    }
+  ],
+  "environment": "os=linux;arch=x86_64;scheduler=sequential;implementation=sha256:94a6ab071c1263dcca8991a37b98f0430af5d7959fea8b32e8bbac48992afda2",
+  "fixtures": "sha256:f7e1e792cf9f241fd318a4a291b2e549c95814e0f5feea65d5f2826c2c05fb92",
+  "kernel": "sha256:2eca4ccf13bff062b474aafb12b18057db636e182542fa6b8fd1be89798d8301",
+  "limitations": [
+    "Evidence applies only to the named fixtures, subject, manifest, kernel, and slice0 profile."
+  ],
+  "manifest": "sha256:62803f4c433edeb71df689dc5fa2ed011bf11adb04468ef97ea5dd15b5ff69a1",
+  "profile": "slice0",
+  "schema": "nexa.evidence/0.3",
+  "subject": "sha256:f1c01cb16b5bfa357df17aa126593c9c86a10f809826a9711865afa7fc23a68e",
+  "tool_version": "0.3.0"
+}

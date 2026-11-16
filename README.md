@@ -4,7 +4,7 @@ Nexa is a proposed general-purpose, AI-first language with typed component compo
 
 **Current status: Slice 0 is implemented.** Nexa parses and checks its small source subset, seals immutable source memories, composes typed blueprints under locks, executes authorized console effects, inspects nested components, and saves a whole composition as another memory. This is the first local slice of the proposed language.
 
-Start with the [runnable Slice 0 demo](docs/slice0-demo.md) or the [milestones](docs/milestones.md). The [language specification](docs/nexa-language-specification-0.3.md), [implementation plan](docs/nexa-functional-slice-plan.md), [M0 Rust walkthrough](docs/m0-walkthrough.md), and [Slice 0 code walkthrough](docs/slice0-walkthrough.md) provide the detail.
+Start with the [runnable Slice 0 demo](docs/slice0-demo.md), [validation record](docs/validation/slice0.md), or [milestones](docs/milestones.md). The [language specification](docs/nexa-language-specification-0.3.md), [implementation plan](docs/nexa-functional-slice-plan.md), [M0 Rust walkthrough](docs/m0-walkthrough.md), and [Slice 0 code walkthrough](docs/slice0-walkthrough.md) provide the detail.
 
 ## Build and try it
 
