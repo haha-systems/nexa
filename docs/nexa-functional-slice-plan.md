@@ -2,7 +2,8 @@
 
 **Version:** 0.3 companion plan  
 **Date:** 16 November 2026  
-**Status:** Build plan; the described implementation has not been built  
+**Status:** M0 implemented and verified; M1–M6 remain planned
+
 **Specification:** [Nexa Language Specification 0.3](nexa-language-specification-0.3.md)
 
 **Contents**
@@ -140,7 +141,7 @@ rust-toolchain.toml
 README.md
 ```
 
-This is the target repository, not an existing implementation. Combine modules when that simplifies the code without merging authority and parsing boundaries. Run commands during development with `cargo run -- <arguments>`. Installing with `cargo install --path . --locked` supplies the shorter `nexa` used below.
+This is the target module layout as the slice grows. M0 currently keeps its foundation contracts in top-level library modules; parser, store, and runtime subtrees arrive in later milestones. Combine modules when that simplifies the code without merging authority and parsing boundaries. Run commands during development with `cargo run -- <arguments>`. Installing with `cargo install --path . --locked` supplies the shorter `nexa` used below.
 
 ## 5. Exact example fixtures
 
@@ -287,6 +288,8 @@ These are dependency gates, not calendar promises. Keep the earliest runnable pa
 
 ### M0. Freeze small contracts
 
+**Implemented:** the Cargo library/CLI, typed wire formats, strict JSON parser, normalizer, content identities, generated schemas, kernel descriptor, and learning guide are present. Validation covers 25 tests plus formatting and Clippy checks. See the repository README and [M0 walkthrough](m0-walkthrough.md). This is contract validation, not source execution or complete Slice 0 conformance.
+
 Implement schema/profile IDs, typed values, diagnostics, canonical JSON, hashes, and the kernel descriptor. Write the source-manifest, lock, draft, ProgramSpec, application, receipt, and evidence schemas. Define operational faults and the CLI exit codes in specification Section 19.
 
 **Gate:** different JSON key order yields the same normalized digest; semantic changes yield different digests; duplicate keys/IDs and malformed input fail; kernel identity changes with its ABI or implementation. Source blobs retain their exact byte hash.
@@ -331,7 +334,7 @@ Finish the CLI, fixture runner, reports, README, and clean-room demo. Use tempor
 
 ## 7. Demonstration command sequence
 
-These commands describe the target CLI after implementation. They are not commands that can run against the current documents alone. Run from the implementation repository with the Section 5 fixtures present and `nexa` installed, or replace the `nexa` prefix with `cargo run --`. The sealer creates the local store; create `build/` for generated outputs.
+These commands describe the target CLI after the full slice is implemented. M0's available commands are documented in the repository README; memory sealing and execution below remain future work. Run from the implementation repository with the Section 5 fixtures present and `nexa` installed, or replace the `nexa` prefix with `cargo run --`. The sealer creates the local store; create `build/` for generated outputs.
 
 ```sh
 mkdir -p build

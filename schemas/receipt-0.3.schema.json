@@ -1,0 +1,319 @@
+{
+  "$defs": {
+    "DecisionRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/PolicyDecision"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "resource",
+        "decision",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "Digest": {
+      "maxLength": 71,
+      "minLength": 71,
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "EffectRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "dispatched": {
+          "type": "boolean"
+        },
+        "node_path": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_path",
+        "operation",
+        "resource",
+        "dispatched"
+      ],
+      "type": "object"
+    },
+    "FaultCode": {
+      "enum": [
+        "IO",
+        "BUDGET_EXCEEDED",
+        "BINDING_UNAVAILABLE",
+        "KERNEL_MISMATCH",
+        "INTEGRITY_MISMATCH",
+        "ARITHMETIC_OVERFLOW"
+      ],
+      "type": "string"
+    },
+    "NodeRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "memory": {
+          "$ref": "#/$defs/Digest"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "memory",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "Outcome": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Succeeded",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Value"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Skipped",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Denied",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "AwaitingApproval",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "fault": {
+              "$ref": "#/$defs/FaultCode"
+            },
+            "kind": {
+              "const": "Failed",
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "fault",
+            "message"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Cancelled",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "PolicyDecision": {
+      "enum": [
+        "allow",
+        "deny",
+        "ask",
+        "abstain"
+      ],
+      "type": "string"
+    },
+    "Profile": {
+      "enum": [
+        "slice0"
+      ],
+      "type": "string"
+    },
+    "ReceiptSchema": {
+      "enum": [
+        "nexa.receipt/0.3"
+      ],
+      "type": "string"
+    },
+    "Value": {
+      "description": "`Unit(())` deliberately serializes its value as null, not as a missing field.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "String",
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "Unit",
+              "type": "string"
+            },
+            "value": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$id": "https://nexa.invalid/schemas/receipt-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/DecisionRecord"
+      },
+      "type": "array"
+    },
+    "effects": {
+      "items": {
+        "$ref": "#/$defs/EffectRecord"
+      },
+      "type": "array"
+    },
+    "invocation_id": {
+      "type": "string"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/NodeRecord"
+      },
+      "type": "array"
+    },
+    "observed_time": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "outcome": {
+      "$ref": "#/$defs/Outcome"
+    },
+    "principal": {
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "program": {
+      "$ref": "#/$defs/Digest"
+    },
+    "schema": {
+      "$ref": "#/$defs/ReceiptSchema"
+    }
+  },
+  "required": [
+    "schema",
+    "profile",
+    "invocation_id",
+    "program",
+    "principal",
+    "nodes",
+    "decisions",
+    "effects",
+    "outcome"
+  ],
+  "title": "Receipt",
+  "type": "object"
+}

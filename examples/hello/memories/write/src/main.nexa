@@ -1,0 +1,6 @@
+nexa 0.3
+module local.console.line
+
+export action write(message is String) -> Unit effects {io.stdout} {
+  return std.console.write_line(message)
+}

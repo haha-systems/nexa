@@ -1,0 +1,42 @@
+{
+  "$id": "https://nexa.invalid/schemas/value-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "`Unit(())` deliberately serializes its value as null, not as a missing field.",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "String",
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "Value"
+}

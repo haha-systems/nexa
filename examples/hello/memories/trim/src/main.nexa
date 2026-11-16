@@ -1,0 +1,6 @@
+nexa 0.3
+module local.text.trim
+
+export fn trim(name is String) -> String {
+  return std.text.trim_ascii(name)
+}

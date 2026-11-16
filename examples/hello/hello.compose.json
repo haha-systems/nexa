@@ -1,0 +1,84 @@
+{
+  "schema": "nexa.blueprint-draft/0.3",
+  "language": "0.3",
+  "profile": "slice0",
+  "entry": "example.hello.hello",
+  "inputs": [
+    {
+      "name": "name",
+      "type": "String"
+    }
+  ],
+  "output": {
+    "name": "result",
+    "type": "Unit"
+  },
+  "nodes": [
+    {
+      "id": "clean",
+      "selector": "local.text.trim@1.0.0",
+      "export": "trim"
+    },
+    {
+      "id": "greeting",
+      "selector": "local.hello.greet@1.0.0",
+      "export": "greet"
+    },
+    {
+      "id": "write",
+      "selector": "local.console.line@1.0.0",
+      "export": "write"
+    }
+  ],
+  "connections": [
+    {
+      "from": {
+        "kind": "input",
+        "port": "name"
+      },
+      "to": {
+        "kind": "node",
+        "node": "clean",
+        "port": "name"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node": "clean",
+        "port": "result"
+      },
+      "to": {
+        "kind": "node",
+        "node": "greeting",
+        "port": "name"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node": "greeting",
+        "port": "result"
+      },
+      "to": {
+        "kind": "node",
+        "node": "write",
+        "port": "message"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node": "write",
+        "port": "result"
+      },
+      "to": {
+        "kind": "output",
+        "port": "result"
+      }
+    }
+  ],
+  "order_edges": [],
+  "settings": [],
+  "requirements": []
+}

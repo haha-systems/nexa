@@ -1,0 +1,12 @@
+{
+  "schema": "nexa.memory-source/0.3",
+  "name": "local.text.trim",
+  "version": "1.0.0",
+  "module": "local.text.trim",
+  "sources": [
+    "src/main.nexa"
+  ],
+  "entry": "trim",
+  "kernel": "std.slice0@0.3.0",
+  "dependencies": []
+}

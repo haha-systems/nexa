@@ -1,0 +1,336 @@
+{
+  "$defs": {
+    "CallableContract": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_requirements": {
+          "items": {
+            "$ref": "#/$defs/CapabilityRequest"
+          },
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "export_name": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "kind": {
+          "$ref": "#/$defs/CallableKind"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/Port"
+          },
+          "type": "array"
+        },
+        "required_bindings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "result_type": {
+          "$ref": "#/$defs/ValueType"
+        }
+      },
+      "required": [
+        "export_name",
+        "kind",
+        "parameters",
+        "result_type",
+        "effects",
+        "required_bindings",
+        "capability_requirements"
+      ],
+      "type": "object"
+    },
+    "CallableKind": {
+      "enum": [
+        "function",
+        "action"
+      ],
+      "type": "string"
+    },
+    "CapabilityRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "capability": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "capability",
+        "resource"
+      ],
+      "type": "object"
+    },
+    "Digest": {
+      "maxLength": 71,
+      "minLength": 71,
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "Identifier": {
+      "not": {
+        "anyOf": [
+          {
+            "enum": [
+              "nexa",
+              "module",
+              "import",
+              "export",
+              "as",
+              "type",
+              "alias",
+              "interface",
+              "impl",
+              "fn",
+              "action",
+              "effects",
+              "let",
+              "var",
+              "state",
+              "return",
+              "if",
+              "else",
+              "match",
+              "for",
+              "in",
+              "while",
+              "break",
+              "continue",
+              "true",
+              "false",
+              "none",
+              "unit",
+              "and",
+              "or",
+              "not",
+              "is",
+              "main",
+              "effect",
+              "requires",
+              "policy",
+              "allow",
+              "deny",
+              "ask",
+              "abstain",
+              "when",
+              "otherwise",
+              "identity",
+              "agent",
+              "group",
+              "grant",
+              "revoke",
+              "pulse",
+              "run",
+              "blueprint",
+              "input",
+              "output",
+              "node",
+              "connect",
+              "after",
+              "set",
+              "memory",
+              "on",
+              "emit",
+              "task",
+              "spawn",
+              "await",
+              "scope",
+              "defer"
+            ]
+          },
+          {
+            "pattern": "[\\r\\n]"
+          }
+        ]
+      },
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "type": "string"
+    },
+    "Implementation": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "entry": {
+              "$ref": "#/$defs/Identifier"
+            },
+            "kind": {
+              "const": "source",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "entry"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "program",
+              "type": "string"
+            },
+            "program": {
+              "$ref": "#/$defs/Digest"
+            }
+          },
+          "required": [
+            "kind",
+            "program"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Language": {
+      "enum": [
+        "0.3"
+      ],
+      "type": "string"
+    },
+    "MemoryMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "description",
+        "provenance"
+      ],
+      "type": "object"
+    },
+    "MemorySchema": {
+      "enum": [
+        "nexa.memory/0.3"
+      ],
+      "type": "string"
+    },
+    "Port": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/Identifier"
+        },
+        "type": {
+          "$ref": "#/$defs/ValueType"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "type": "object"
+    },
+    "Profile": {
+      "enum": [
+        "slice0"
+      ],
+      "type": "string"
+    },
+    "SourceBlob": {
+      "additionalProperties": false,
+      "properties": {
+        "blob": {
+          "$ref": "#/$defs/Digest"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "blob"
+      ],
+      "type": "object"
+    },
+    "ValueType": {
+      "enum": [
+        "String",
+        "Unit"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "https://nexa.invalid/schemas/memory-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "dependencies": {
+      "items": {
+        "$ref": "#/$defs/Digest"
+      },
+      "type": "array"
+    },
+    "exports": {
+      "items": {
+        "$ref": "#/$defs/CallableContract"
+      },
+      "type": "array"
+    },
+    "implementation": {
+      "$ref": "#/$defs/Implementation"
+    },
+    "kernel": {
+      "$ref": "#/$defs/Digest"
+    },
+    "language": {
+      "$ref": "#/$defs/Language"
+    },
+    "metadata": {
+      "$ref": "#/$defs/MemoryMetadata"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema": {
+      "$ref": "#/$defs/MemorySchema"
+    },
+    "source_map": {
+      "items": {
+        "$ref": "#/$defs/SourceBlob"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "language",
+    "profile",
+    "implementation",
+    "exports",
+    "dependencies",
+    "kernel",
+    "source_map",
+    "metadata"
+  ],
+  "title": "MemoryRecord",
+  "type": "object"
+}

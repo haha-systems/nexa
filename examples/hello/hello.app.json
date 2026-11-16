@@ -1,0 +1,17 @@
+{
+  "schema": "nexa.application/0.3",
+  "principal": "app:hello",
+  "requests": [
+    {
+      "capability": "console.write",
+      "resource": "stdout"
+    }
+  ],
+  "policies": [
+    {
+      "operation": "std.console.write_line",
+      "resource": "stdout",
+      "decision": "allow"
+    }
+  ]
+}

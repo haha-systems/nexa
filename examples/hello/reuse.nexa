@@ -1,0 +1,11 @@
+nexa 0.3
+module example.reuse
+
+export blueprint hello_again {
+  input name is String
+  output result is Unit
+
+  node saved = memory("local.hello@1.0.0", export: "hello")
+  connect input.name -> saved.name
+  connect saved.result -> output.result
+}

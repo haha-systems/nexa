@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "SourceSpan": {
+      "additionalProperties": false,
+      "description": "Byte offsets refer to a particular source buffer, never to character indices.",
+      "properties": {
+        "end": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source",
+        "start",
+        "end"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://nexa.invalid/schemas/diagnostic-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "span": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SourceSpan"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "code",
+    "message"
+  ],
+  "title": "Diagnostic",
+  "type": "object"
+}

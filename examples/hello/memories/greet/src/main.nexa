@@ -1,0 +1,6 @@
+nexa 0.3
+module local.hello.greet
+
+export fn greet(name is String) -> String {
+  return "Hello, " + name + "!"
+}

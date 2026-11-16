@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "Expectation": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "result": {
+          "$ref": "#/$defs/Value"
+        },
+        "status": {
+          "$ref": "#/$defs/ExpectedStatus"
+        },
+        "stdout": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stdout",
+        "result",
+        "status",
+        "exit_code"
+      ],
+      "type": "object"
+    },
+    "ExpectedStatus": {
+      "enum": [
+        "Succeeded",
+        "Skipped",
+        "Denied",
+        "AwaitingApproval",
+        "Failed",
+        "Cancelled"
+      ],
+      "type": "string"
+    },
+    "FixtureCase": {
+      "additionalProperties": false,
+      "properties": {
+        "allow": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "expect": {
+          "$ref": "#/$defs/Expectation"
+        },
+        "input": {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "input",
+        "allow",
+        "expect"
+      ],
+      "type": "object"
+    },
+    "FixturesSchema": {
+      "enum": [
+        "nexa.fixtures/0.3"
+      ],
+      "type": "string"
+    },
+    "Value": {
+      "description": "`Unit(())` deliberately serializes its value as null, not as a missing field.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "String",
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "Unit",
+              "type": "string"
+            },
+            "value": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$id": "https://nexa.invalid/schemas/fixtures-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/FixtureCase"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "$ref": "#/$defs/FixturesSchema"
+    }
+  },
+  "required": [
+    "schema",
+    "cases"
+  ],
+  "title": "FixtureSuite",
+  "type": "object"
+}

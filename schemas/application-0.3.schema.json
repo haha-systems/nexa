@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "ApplicationSchema": {
+      "enum": [
+        "nexa.application/0.3"
+      ],
+      "type": "string"
+    },
+    "CapabilityRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "capability": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "capability",
+        "resource"
+      ],
+      "type": "object"
+    },
+    "PolicyDecision": {
+      "enum": [
+        "allow",
+        "deny",
+        "ask",
+        "abstain"
+      ],
+      "type": "string"
+    },
+    "PolicyRule": {
+      "additionalProperties": false,
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/PolicyDecision"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation",
+        "resource",
+        "decision"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://nexa.invalid/schemas/application-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "policies": {
+      "items": {
+        "$ref": "#/$defs/PolicyRule"
+      },
+      "type": "array"
+    },
+    "principal": {
+      "type": "string"
+    },
+    "requests": {
+      "items": {
+        "$ref": "#/$defs/CapabilityRequest"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "$ref": "#/$defs/ApplicationSchema"
+    }
+  },
+  "required": [
+    "schema",
+    "principal",
+    "requests",
+    "policies"
+  ],
+  "title": "ApplicationManifest",
+  "type": "object"
+}

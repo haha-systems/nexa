@@ -1,0 +1,23 @@
+{
+  "schema": "nexa.fixtures/0.3",
+  "cases": [
+    {
+      "name": "trimmed-name",
+      "input": {
+        "name": "  Ada  "
+      },
+      "allow": [
+        "stdout"
+      ],
+      "expect": {
+        "stdout": "Hello, Ada!\n",
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "exit_code": 0
+      }
+    }
+  ]
+}

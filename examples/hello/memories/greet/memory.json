@@ -1,0 +1,12 @@
+{
+  "schema": "nexa.memory-source/0.3",
+  "name": "local.hello.greet",
+  "version": "1.0.0",
+  "module": "local.hello.greet",
+  "sources": [
+    "src/main.nexa"
+  ],
+  "entry": "greet",
+  "kernel": "std.slice0@0.3.0",
+  "dependencies": []
+}

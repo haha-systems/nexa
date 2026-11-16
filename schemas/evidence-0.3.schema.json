@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "CaseResult": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "passed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "passed",
+        "detail"
+      ],
+      "type": "object"
+    },
+    "Digest": {
+      "maxLength": 71,
+      "minLength": 71,
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "EvidenceSchema": {
+      "enum": [
+        "nexa.evidence/0.3"
+      ],
+      "type": "string"
+    },
+    "Profile": {
+      "enum": [
+        "slice0"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "https://nexa.invalid/schemas/evidence-0.3.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allow": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/CaseResult"
+      },
+      "type": "array"
+    },
+    "environment": {
+      "type": "string"
+    },
+    "fixtures": {
+      "$ref": "#/$defs/Digest"
+    },
+    "kernel": {
+      "$ref": "#/$defs/Digest"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "manifest": {
+      "$ref": "#/$defs/Digest"
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    },
+    "schema": {
+      "$ref": "#/$defs/EvidenceSchema"
+    },
+    "subject": {
+      "$ref": "#/$defs/Digest"
+    },
+    "tool_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "profile",
+    "subject",
+    "tool_version",
+    "kernel",
+    "fixtures",
+    "manifest",
+    "environment",
+    "allow",
+    "cases",
+    "limitations"
+  ],
+  "title": "EvidenceReport",
+  "type": "object"
+}
