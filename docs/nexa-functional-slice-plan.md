@@ -6,6 +6,8 @@
 
 **Specification:** [Nexa Language Specification 0.3](nexa-language-specification-0.3.md)
 
+For a short roadmap and current status, see [Nexa milestones](milestones.md). This plan contains the detailed fixtures, implementation steps, and acceptance checks.
+
 **Contents**
 
 - [1. Outcome](#1-outcome)

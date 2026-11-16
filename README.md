@@ -4,7 +4,7 @@ Nexa is a proposed general-purpose, AI-first language with typed component compo
 
 **Current milestone: M0 — contracts and identity.** The CLI validates local wire invariants, normalizes versioned objects, computes content identities, exports JSON Schemas, and describes the kernel ABI. Source parsing/evaluation, memory loading, graph type checking, and authorized program execution arrive in later milestones. This is not yet a Slice 0 runtime.
 
-Read the [language specification](docs/nexa-language-specification-0.3.md), [implementation plan](docs/nexa-functional-slice-plan.md), and [M0 Rust walkthrough](docs/m0-walkthrough.md).
+Start with the [milestones](docs/milestones.md) for the roadmap and completion criteria. The [language specification](docs/nexa-language-specification-0.3.md), [implementation plan](docs/nexa-functional-slice-plan.md), and [M0 Rust walkthrough](docs/m0-walkthrough.md) provide the detail.
 
 ## Build and try it
 
