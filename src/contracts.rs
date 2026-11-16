@@ -382,6 +382,23 @@ pub struct CaseResult {
     pub name: String,
     pub passed: bool,
     pub detail: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected: Option<Expectation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actual: Option<CaseObservation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diagnostic: Option<crate::diagnostic::Diagnostic>,
+    #[serde(default)]
+    pub allow: Vec<String>,
+}
+
+/// The exact externally visible result of one fixture invocation.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CaseObservation {
+    pub stdout: Vec<u8>,
+    pub outcome: Outcome,
+    pub exit_code: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

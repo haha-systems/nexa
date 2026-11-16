@@ -18,6 +18,96 @@
         "status": "Succeeded",
         "exit_code": 0
       }
+    },
+    {
+      "name": "ascii-whitespace",
+      "input": {
+        "name": "\tAda\r\n"
+      },
+      "allow": [
+        "stdout"
+      ],
+      "expect": {
+        "stdout": "Hello, Ada!\n",
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "empty-name",
+      "input": {
+        "name": ""
+      },
+      "allow": [
+        "stdout"
+      ],
+      "expect": {
+        "stdout": "Hello, !\n",
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "unicode-name",
+      "input": {
+        "name": " Zoë "
+      },
+      "allow": [
+        "stdout"
+      ],
+      "expect": {
+        "stdout": "Hello, Zoë!\n",
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "nonbreaking-space",
+      "input": {
+        "name": " Ada "
+      },
+      "allow": [
+        "stdout"
+      ],
+      "expect": {
+        "stdout": "Hello,  Ada !\n",
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "vertical-tab",
+      "input": {
+        "name": "\u000bAda\f"
+      },
+      "allow": [
+        "stdout"
+      ],
+      "expect": {
+        "stdout": "Hello, Ada!\n",
+        "result": {
+          "type": "Unit",
+          "value": null
+        },
+        "status": "Succeeded",
+        "exit_code": 0
+      }
     }
   ]
 }

@@ -2,7 +2,8 @@
 
 **Version:** 0.3  
 **Date:** 16 November 2026  
-**Status:** Proposed design specification; no implementation conformance is claimed  
+**Status:** Proposed design specification; local Slice 0 reference implementation; full-language conformance is not claimed
+
 **Supersedes:** Nexa draft 0.1 and draft 0.2  
 **Companion:** [Functional Slice Implementation Plan](nexa-functional-slice-plan.md)
 
@@ -46,7 +47,7 @@ Two requirements govern the design:
 
 A Nexa program can be handwritten source, a composition of existing memories, or a combination of both. A **blueprint** describes that composition as a typed graph. It is both executable construction data and a human-inspectable description of the program. A validated blueprint can supply much of the content of a new memory.
 
-The words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are normative. Examples illustrate this proposed language; they have not been executed by a Nexa compiler. The full language is specified here at the source, semantic, and tool-interface level. Binary formats, native code generation, a stable foreign ABI, provider APIs, and an exhaustive library catalogue are outside this revision.
+The words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are normative. Examples illustrate the full proposed language. The Slice 0 source/blueprint fixtures are exercised by the reference interpreter; full-language examples outside that profile remain design examples. The full language is specified here at the source, semantic, and tool-interface level. Binary formats, native code generation, a stable foreign ABI, provider APIs, and an exhaustive library catalogue are outside this revision.
 
 The document distinguishes the full design from **Slice 0**, the deliberately smaller implementation profile in Section 24. An implementation of Slice 0 MUST advertise that profile rather than claim full Nexa 0.3 conformance. Unsupported features MUST produce diagnostics rather than acquire approximate semantics.
 
@@ -795,6 +796,8 @@ The standalone/embedding invariant applies to semantic plans and protected effec
 
 Slice 0 supports UTF-8 source, the version/module header, comments, exported `fn` and `action` declarations, parameters and results of `String` or `Unit`, explicit action effect sets, string/unit literals, parameter references, string concatenation, calls, and one explicit `return` expression per body. Each source memory exports one callable; helper functions may be present if their call graph is acyclic. `std` is the only implicit namespace and resolves to the locked kernel.
 
+The reference parser/checker bounds expression, additive-chain, and helper-call-graph nesting at 256, reporting diagnostics for inputs beyond that profile limit. The closed kernel effect set is `io.stdout`; unregistered effect declarations are rejected.
+
 Its two kernel operations are `std.text.trim_ascii(String) -> String` and `std.console.write_line(String) -> Unit effects {io.stdout}`. Evaluation is eager, arguments left-to-right, with no implicit I/O during resolution/checking. Runtime faults have stable codes and appear in receipts.
 
 Blueprints support typed inputs, a single `output result`, source/blueprint-memory nodes, data connections, and explicit order edges. Constant `set` bindings, generic types, pattern matching, explicit Pulse source expressions, tasks, agents, sensitive-data annotations, persistent state, network access, inference, and dynamic memory discovery are unsupported and must be rejected.
@@ -839,4 +842,4 @@ This specification is based on the supplied Nexa language draft 0.1, the supplie
 
 The small lexical experiment in the discussion compared four fragments with two tokenizers. Replacing `is` with `:` did not reduce tokens in those fragments; combined list/annotation/return changes saved about 2.8%. That experiment supports retaining readable syntax while measuring broader task costs. It is not evidence of performance or comprehension for this proposed language.
 
-No implementation, human-comprehension study, benchmark, or model evaluation is claimed by this document. Those results belong in versioned evidence produced during implementation.
+The reference implementation exercises Slice 0 through source/runtime, integrity, composition, reuse, inspection, and subprocess acceptance tests. See the [reproduction guide](slice0-demo.md). Full-language conformance, human-comprehension results, throughput benchmarks, and model evaluations are not claimed.

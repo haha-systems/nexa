@@ -1,6 +1,6 @@
 # M0: a Rust reading guide
 
-M0 establishes the data contracts and identities later stages can rely on. It does not execute Nexa source. Start with the small pieces, then follow one CLI request through the library.
+This guide covers the M0 foundation: the contracts and identities used by the completed slice. For source execution and composition, continue with the [Slice 0 walkthrough](slice0-walkthrough.md). Start with the small pieces, then follow one CLI request through the library.
 
 ## 1. An owned type with a checked boundary
 
@@ -37,7 +37,7 @@ cargo run --locked -- hash examples/hello/hello.compose.json
 Then follow this path:
 
 ```text
-src/main.rs: read the bytes and select document hashing
+src/main.rs -> cli_impl.rs: read bytes and select document hashing
   -> canonical::parse: preserve/reject input facts before decoding
   -> contracts::normalized_json: select the versioned Rust contract
   -> BlueprintDraft::normalize: check local facts and normalize collections
@@ -69,4 +69,4 @@ Then read `tests/cli.rs`: subprocesses establish that identity does not depend o
 
 Be able to explain why a digest's inner string is private, when borrowing avoids a copy, how `Result` propagates failures, why a visitor is needed for duplicate keys, why array normalization belongs to the document, and why an ABI descriptor cannot grant permission or prove runtime behavior.
 
-The next step introduces source ownership and enums for tokens/expressions. A compilation session will own source buffers; AST spans can refer to their byte ranges without making every AST type carry a source-text lifetime.
+The implemented source pipeline extends these ideas with owned syntax/checked-expression enums and UTF-8 byte spans. Follow [source/mod.rs](../src/source/mod.rs) and the [Slice 0 walkthrough](slice0-walkthrough.md) to continue.

@@ -72,7 +72,7 @@ fn canonical_output_is_exact_and_raw_hash_keeps_source_bytes() {
 }
 
 #[test]
-fn execution_is_not_pretended_to_exist_in_m0() {
+fn run_requires_explicit_execution_inputs() {
     let output = binary().arg("run").arg("anything").output().unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());

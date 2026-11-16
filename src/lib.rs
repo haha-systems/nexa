@@ -1,14 +1,19 @@
-//! Nexa's reusable semantic foundation.
+//! Nexa's Slice 0 reference implementation.
 //!
-//! M0 validates wire contracts and identity. It does not parse or execute Nexa
-//! source, resolve memories, or establish semantic compatibility of graph ports.
+//! Source checking, immutable memories, typed blueprint composition, authorized
+//! execution, inspection, and evidence share this library and its wire contracts.
 
+pub mod blueprint;
 pub mod canonical;
 pub mod contracts;
 pub mod diagnostic;
 pub mod digest;
+pub mod evidence;
 pub mod kernel;
+pub mod memory;
+pub mod runtime;
 pub mod schemas;
+pub mod source;
 pub mod value;
 
 pub const LANGUAGE_VERSION: &str = "0.3";

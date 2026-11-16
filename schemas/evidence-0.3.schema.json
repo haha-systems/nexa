@@ -1,10 +1,77 @@
 {
   "$defs": {
+    "CaseObservation": {
+      "additionalProperties": false,
+      "description": "The exact externally visible result of one fixture invocation.",
+      "properties": {
+        "exit_code": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outcome": {
+          "$ref": "#/$defs/Outcome"
+        },
+        "stdout": {
+          "items": {
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "stdout",
+        "outcome",
+        "exit_code"
+      ],
+      "type": "object"
+    },
     "CaseResult": {
       "additionalProperties": false,
       "properties": {
+        "actual": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CaseObservation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allow": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "detail": {
           "type": "string"
+        },
+        "diagnostic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Diagnostic"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expected": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Expectation"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "name": {
           "type": "string"
@@ -20,6 +87,38 @@
       ],
       "type": "object"
     },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "span": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceSpan"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
     "Digest": {
       "maxLength": 71,
       "minLength": 71,
@@ -32,11 +131,234 @@
       ],
       "type": "string"
     },
+    "Expectation": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "result": {
+          "$ref": "#/$defs/Value"
+        },
+        "status": {
+          "$ref": "#/$defs/ExpectedStatus"
+        },
+        "stdout": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stdout",
+        "result",
+        "status",
+        "exit_code"
+      ],
+      "type": "object"
+    },
+    "ExpectedStatus": {
+      "enum": [
+        "Succeeded",
+        "Skipped",
+        "Denied",
+        "AwaitingApproval",
+        "Failed",
+        "Cancelled"
+      ],
+      "type": "string"
+    },
+    "FaultCode": {
+      "enum": [
+        "IO",
+        "BUDGET_EXCEEDED",
+        "BINDING_UNAVAILABLE",
+        "KERNEL_MISMATCH",
+        "INTEGRITY_MISMATCH",
+        "ARITHMETIC_OVERFLOW"
+      ],
+      "type": "string"
+    },
+    "Outcome": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Succeeded",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/Value"
+            }
+          },
+          "required": [
+            "kind",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Skipped",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Denied",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "AwaitingApproval",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "fault": {
+              "$ref": "#/$defs/FaultCode"
+            },
+            "kind": {
+              "const": "Failed",
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "fault",
+            "message"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "Cancelled",
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "Profile": {
       "enum": [
         "slice0"
       ],
       "type": "string"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "description": "Byte offsets refer to a particular source buffer, never to character indices.",
+      "properties": {
+        "end": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "start": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source",
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "Value": {
+      "description": "`Unit(())` deliberately serializes its value as null, not as a missing field.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "String",
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "Unit",
+              "type": "string"
+            },
+            "value": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
     }
   },
   "$id": "https://nexa.invalid/schemas/evidence-0.3.schema.json",

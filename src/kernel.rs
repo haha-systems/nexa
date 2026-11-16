@@ -1,4 +1,5 @@
-//! Descriptor only: registering or executing these operations arrives in M1/M2.
+//! Kernel ABI and installed implementation identity.
+//! Operation evaluation and authorized dispatch live in source and runtime.
 
 use crate::{
     contracts::*,

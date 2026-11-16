@@ -2,7 +2,7 @@
 
 **Version:** 0.3 companion plan  
 **Date:** 16 November 2026  
-**Status:** M0 implemented and verified; M1–M6 remain planned
+**Status:** M0–M6 implemented and verified for the local Slice 0 profile
 
 **Specification:** [Nexa Language Specification 0.3](nexa-language-specification-0.3.md)
 
@@ -143,7 +143,7 @@ rust-toolchain.toml
 README.md
 ```
 
-This is the target module layout as the slice grows. M0 currently keeps its foundation contracts in top-level library modules; parser, store, and runtime subtrees arrive in later milestones. Combine modules when that simplifies the code without merging authority and parsing boundaries. Run commands during development with `cargo run -- <arguments>`. Installing with `cargo install --path . --locked` supplies the shorter `nexa` used below.
+This grouping guided the implementation. The current crate uses `src/source`, `src/memory`, `src/blueprint`, `runtime.rs`, and `evidence.rs`, with foundation modules at the top level; the CLI shares that library. Combine modules when that simplifies the code without merging authority and parsing boundaries. Run commands during development with `cargo run -- <arguments>`. Installing with `cargo install --path . --locked` supplies the shorter `nexa` used below.
 
 ## 5. Exact example fixtures
 
@@ -290,7 +290,7 @@ These are dependency gates, not calendar promises. Keep the earliest runnable pa
 
 ### M0. Freeze small contracts
 
-**Implemented:** the Cargo library/CLI, typed wire formats, strict JSON parser, normalizer, content identities, generated schemas, kernel descriptor, and learning guide are present. Validation covers 25 tests plus formatting and Clippy checks. See the repository README and [M0 walkthrough](m0-walkthrough.md). This is contract validation, not source execution or complete Slice 0 conformance.
+**Implemented:** the Cargo library/CLI, typed wire formats, strict JSON parser, normalizer, content identities, generated schemas, kernel descriptor, and learning guide are present. The original M0 foundation covers 25 tests plus formatting and Clippy checks; the full slice adds the source, runtime, store, blueprint, reuse, inspection, and acceptance suites. See the repository README and [M0 walkthrough](m0-walkthrough.md). This is contract validation, not source execution or complete Slice 0 conformance.
 
 Implement schema/profile IDs, typed values, diagnostics, canonical JSON, hashes, and the kernel descriptor. Write the source-manifest, lock, draft, ProgramSpec, application, receipt, and evidence schemas. Define operational faults and the CLI exit codes in specification Section 19.
 
@@ -298,11 +298,15 @@ Implement schema/profile IDs, typed values, diagnostics, canonical JSON, hashes,
 
 ### M1. Parse, check, and evaluate real source
 
+**Implemented:** this gate is covered by the linked [milestone evidence](milestones.md#completion-evidence) and the [runnable demo](slice0-demo.md).
+
 Implement the exact subset with source spans, parameter/`std` resolution, return/argument checking, callable-kind checking, effect derivation, and acyclic helper calls. Unsupported constructs produce explicit diagnostics. The evaluator consumes checked AST/Core IR.
 
 **Gate:** trim/greet execute for the fixtures; a changed literal changes behavior without Rust implementation changes; wrong types and unknown symbols fail; a pure function calling console output fails without writing anything.
 
 ### M2. Protect the console effect
+
+**Implemented:** this gate is covered by the linked [milestone evidence](milestones.md#completion-evidence) and the [runnable demo](slice0-demo.md).
 
 Implement context, scoped stdout, policy combination, protected dispatch, and receipts. Define dispatch immediately before the first write. Capture failures without automatic retry. Use a host-supplied trace sink in tests.
 
@@ -310,11 +314,15 @@ Implement context, scoped stdout, policy combination, protected dispatch, and re
 
 ### M3. Seal and lock memories
 
+**Implemented:** this gate is covered by the linked [milestone evidence](milestones.md#completion-evidence) and the [runnable demo](slice0-demo.md).
+
 Implement immutable source-memory sealing/loading, confined source paths, catalogue selection, ABI/contract validation, and transitive dependency verification. Write selector/export-to-digest bindings and kernel/profile data into the lock. Sealing never invokes source actions.
 
 **Gate:** all three memories load in a fresh process; tampering fails; a moved alias cannot change locked selection; an explicit new resolution sees the replacement; sealing/checking produces no application output.
 
 ### M4. Compose, inspect, and run
+
+**Implemented:** this gate is covered by the linked [milestone evidence](milestones.md#completion-evidence) and the [runnable demo](slice0-demo.md).
 
 Decode both construction forms into one draft. Validate exact ports/types, one producer per input, complete binding, one result, data/control acyclicity, and derived effects/resources. Normalize/seal the ProgramSpec, build its Pulse plan, and execute it with the scheduler, evaluator, and protected dispatcher.
 
@@ -324,11 +332,15 @@ Expose bounded JSON inspection with node/port types, source/memory references, c
 
 ### M5. Remember and reuse the graph
 
+**Implemented:** this gate is covered by the linked [milestone evidence](milestones.md#completion-evidence) and the [runnable demo](slice0-demo.md).
+
 Implement `memory seal --program`. Derive its external callable contract and keep its locked graph/component references. Execute nested blueprint memories under the inherited context with qualified node paths. Reject dependency cycles and permission/budget expansion.
 
 **Gate:** a one-node outer blueprint reuses the whole greeting, produces equivalent output/leaf effect in a fresh process, and still denies without stdout. Inspection expands its three internal nodes. Changing an inner dependency creates a new enclosing identity.
 
 ### M6. Produce acceptance evidence
+
+**Implemented:** this gate is covered by the linked [milestone evidence](milestones.md#completion-evidence) and the [runnable demo](slice0-demo.md).
 
 Finish the CLI, fixture runner, reports, README, and clean-room demo. Use temporary stores and subprocesses to prove process-independent loading. Attach checked/test reports without changing executable identity. Keep failure evidence as well as successes.
 
@@ -336,7 +348,7 @@ Finish the CLI, fixture runner, reports, README, and clean-room demo. Use tempor
 
 ## 7. Demonstration command sequence
 
-These commands describe the target CLI after the full slice is implemented. M0's available commands are documented in the repository README; memory sealing and execution below remain future work. Run from the implementation repository with the Section 5 fixtures present and `nexa` installed, or replace the `nexa` prefix with `cargo run --`. The sealer creates the local store; create `build/` for generated outputs.
+The full sequence below is implemented for Slice 0. See the [runnable demo](slice0-demo.md) for expected results, deliberate denial behavior, nested inspection, and fixture reports. Run from the implementation repository with the Section 5 fixtures present and `nexa` installed, or replace the `nexa` prefix with `cargo run --`. The sealer creates the local store; create `build/` for generated outputs.
 
 ```sh
 mkdir -p build

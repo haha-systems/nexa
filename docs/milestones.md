@@ -17,16 +17,20 @@ This page tracks milestone status and completion criteria. The [functional slice
 | Milestone | Status | Result |
 |---|---|---|
 | [M0 — Contracts and identity](#m0--contracts-and-identity) | Complete | Typed formats, strict JSON, canonical identities, schemas, and a foundation CLI. |
-| [M1 — Source language](#m1--source-language) | Next | Parse, check, and evaluate actual Nexa source. |
-| [M2 — Authorized effects](#m2--authorized-effects) | Planned | Execute the console action under explicit capability and policy checks. |
-| [M3 — Memory storage and locks](#m3--memory-storage-and-locks) | Planned | Seal source memories and load exact, verified implementations. |
-| [M4 — Program construction](#m4--program-construction) | Planned | Compose, inspect, and run the three-memory greeting. |
-| [M5 — Composition as memory](#m5--composition-as-memory) | Planned | Save the greeting blueprint as a memory and reuse it. |
-| [M6 — Reproducible slice](#m6--reproducible-slice) | Planned | Demonstrate the full workflow from a fresh checkout and record its evidence. |
+| [M1 — Source language](#m1--source-language) | Complete | Parse, check, and evaluate actual Nexa source. |
+| [M2 — Authorized effects](#m2--authorized-effects) | Complete | Execute the console action under explicit capability and policy checks. |
+| [M3 — Memory storage and locks](#m3--memory-storage-and-locks) | Complete | Seal source memories and load exact, verified implementations. |
+| [M4 — Program construction](#m4--program-construction) | Complete | Compose, inspect, and run the three-memory greeting. |
+| [M5 — Composition as memory](#m5--composition-as-memory) | Complete | Save the greeting blueprint as a memory and reuse it. |
+| [M6 — Reproducible slice](#m6--reproducible-slice) | Complete | Demonstrate the full workflow from a fresh checkout and record its evidence. |
 
 **Complete** means the milestone's completion gate has been demonstrated. **Next** identifies the selected next piece of work; it does not mean implementation has started. **Planned** means the work remains ahead. These are completion gates, not calendar estimates.
 
-M0 establishes format and identity guarantees. Nexa does not yet parse source, resolve memories, or execute programs. Full Slice 0 is complete only after M6.
+M0–M6 are implemented and tested. The local Slice 0 workflow now parses source, seals and resolves memories, checks blueprints, runs authorized effects, inspects nested components, and records fixture evidence. Follow the [runnable demo](slice0-demo.md). Broader language features remain in the directions after Slice 0.
+
+## Completion evidence
+
+The gates are exercised by [source tests](../tests/source.rs), [runtime tests](../tests/runtime.rs), [memory tests](../tests/memory.rs), [blueprint tests](../tests/blueprint.rs), [reuse tests](../tests/reuse.rs), and the [subprocess acceptance suite](../tests/acceptance.rs). [Inspection CLI tests](../tests/inspection_cli.rs) cover bounded pagination, cursor validity, and projection. The [demo](slice0-demo.md) reproduces the complete workflow; the [code walkthrough](slice0-walkthrough.md) explains the Rust boundaries.
 
 ## Order and dependencies
 
@@ -68,7 +72,7 @@ Delivered:
 
 ## M1 — Source language
 
-**Status:** Next. **Depends on:** M0.
+**Status:** Complete. **Depends on:** M0.
 
 Make the small source subset real: read `.nexa` files, check them, and evaluate their implementations.
 
@@ -88,7 +92,7 @@ Source actions can be parsed and checked here. Authorized host dispatch arrives 
 
 ## M2 — Authorized effects
 
-**Status:** Planned. **Depends on:** M1.
+**Status:** Complete. **Depends on:** M1.
 
 Run the checked console action under an explicit execution context.
 
@@ -108,7 +112,7 @@ This milestone exercises checked actions in controlled invocations. End-to-end b
 
 ## M3 — Memory storage and locks
 
-**Status:** Planned. **Depends on:** M1 and M0's identity contracts; follows M2 in the build sequence.
+**Status:** Complete. **Depends on:** M1 and M0's identity contracts; follows M2 in the build sequence.
 
 Turn checked source implementations into immutable, reusable memories.
 
@@ -126,7 +130,7 @@ Build:
 
 ## M4 — Program construction
 
-**Status:** Planned. **Depends on:** M2 and M3.
+**Status:** Complete. **Depends on:** M2 and M3.
 
 Construct the greeting from the three loaded memories and make its blueprint inspectable.
 
@@ -147,7 +151,7 @@ This is the first end-to-end demonstration of constructing a program by referenc
 
 ## M5 — Composition as memory
 
-**Status:** Planned. **Depends on:** M4.
+**Status:** Complete. **Depends on:** M4.
 
 Use the completed blueprint to create a new memory, then use that memory as a component.
 
@@ -167,7 +171,7 @@ This proves that the typed blueprint supplies the executable structure and deriv
 
 ## M6 — Reproducible slice
 
-**Status:** Planned. **Depends on:** M5 and the integrated earlier milestones.
+**Status:** Complete. **Depends on:** M5 and the integrated earlier milestones.
 
 Make the complete workflow reproducible and support its claims with recorded evidence.
 
