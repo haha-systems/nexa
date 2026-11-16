@@ -59,7 +59,9 @@ fn read(path: &Path) -> Result<Vec<u8>> {
 fn pretty(value: &serde_json::Value) -> Result<Vec<u8>> {
     let mut bytes =
         serde_json::to_vec_pretty(value).map_err(|e| Error::new("E_JSON", e.to_string()))?;
+
     bytes.push(b'\n');
+
     Ok(bytes)
 }
 
@@ -108,6 +110,7 @@ fn main() {
             .write_all(&bytes)
             .map_err(|e| Error::new("E_IO", e.to_string()))
     });
+
     if let Err(error) = result {
         // Human-friendly Clap usage errors and structured data/tooling errors are
         // separate; program execution and its receipts are not implemented yet.

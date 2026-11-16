@@ -95,6 +95,7 @@ pub const RESERVED: &[&str] = &[
 
 pub fn identifier_shape(value: &str) -> bool {
     let mut chars = value.bytes();
+
     matches!(chars.next(), Some(c) if c.is_ascii_alphabetic() || c == b'_')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == b'_')
 }
@@ -106,6 +107,7 @@ pub struct Identifier(String);
 impl Identifier {
     pub fn new(value: impl Into<String>) -> Result<Self> {
         let value = value.into();
+
         if identifier_shape(&value) && !RESERVED.contains(&value.as_str()) {
             Ok(Self(value))
         } else {

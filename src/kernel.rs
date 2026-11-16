@@ -38,6 +38,7 @@ impl KernelDescriptor {
                 r#type: ValueType::String,
             })
         };
+
         let mut descriptor = Self {
             schema: KernelSchema::V03,
             language: Language::V03,
@@ -76,7 +77,9 @@ impl KernelDescriptor {
                 },
             ],
         };
+
         descriptor.normalize()?;
+
         Ok(descriptor)
     }
 }
@@ -84,13 +87,16 @@ impl KernelDescriptor {
 impl WireDocument for KernelDescriptor {
     fn normalize(&mut self) -> Result<()> {
         let mut seen = BTreeSet::new();
+
         for operation in &mut self.operations {
             if !seen.insert(&operation.name) {
                 return Err(Error::new("E_DUPLICATE", "duplicate kernel operation"));
             }
             operation.contract.normalize()?;
         }
+
         self.operations.sort_by(|a, b| a.name.cmp(&b.name));
+
         Ok(())
     }
 }

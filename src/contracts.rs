@@ -55,6 +55,7 @@ pub struct EmptyList(Vec<serde_json::Value>);
 
 impl TryFrom<Vec<serde_json::Value>> for EmptyList {
     type Error = Error;
+
     fn try_from(values: Vec<serde_json::Value>) -> Result<Self> {
         if values.is_empty() {
             Ok(Self(values))
@@ -71,6 +72,7 @@ impl JsonSchema for EmptyList {
     fn schema_name() -> Cow<'static, str> {
         "EmptyList".into()
     }
+
     fn json_schema(_: &mut SchemaGenerator) -> Schema {
         json_schema!({"type": "array", "maxItems": 0})
     }
@@ -451,12 +453,14 @@ pub fn normalized_json(bytes: &[u8]) -> Result<serde_json::Value> {
         .get("schema")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| Error::new("E_SCHEMA", "a versioned document needs a schema field"))?;
+
     macro_rules! decoded {
         ($t:ty) => {
             serde_json::to_value(decode::<$t>(value)?)
                 .map_err(|e| Error::new("E_CONTRACT", e.to_string()))
         };
     }
+
     match schema {
         "nexa.memory-source/0.3" => decoded!(SourceManifest),
         "nexa.memory/0.3" => decoded!(MemoryRecord),
@@ -477,11 +481,13 @@ pub fn normalized_json(bytes: &[u8]) -> Result<serde_json::Value> {
 
 fn unique<T: Ord + Clone>(values: impl IntoIterator<Item = T>, path: &str) -> Result<()> {
     let mut seen = BTreeSet::new();
+
     for value in values {
         if !seen.insert(value) {
             return Err(Error::new("E_DUPLICATE", "duplicate entry").at(path));
         }
     }
+
     Ok(())
 }
 
@@ -550,17 +556,23 @@ fn graph_common(
     orders: &mut [OrderEdge],
 ) -> Result<()> {
     ports(inputs, "inputs")?;
+
     if output.name.as_str() != "result" {
         return Err(Error::new(
             "E_OUTPUT",
             "the output port must be named result",
         ));
     }
+
     unique(node_ids.clone(), "nodes")?;
+
     let nodes: BTreeSet<_> = node_ids.into_iter().collect();
     let input_names: BTreeSet<_> = inputs.iter().map(|p| p.name.clone()).collect();
+
     set(connections, "connections")?;
+
     let mut destinations = BTreeSet::new();
+
     for edge in connections.iter() {
         match &edge.from {
             Endpoint::Input { port } if input_names.contains(port) => {}
@@ -579,6 +591,7 @@ fn graph_common(
             ));
         }
     }
+
     if !destinations.contains(&Endpoint::Output {
         port: output.name.clone(),
     }) {
@@ -587,7 +600,9 @@ fn graph_common(
             "the result port must be connected exactly once",
         ));
     }
+
     set(orders, "order_edges")?;
+
     for edge in orders {
         if !nodes.contains(&edge.before) || !nodes.contains(&edge.after) {
             return Err(Error::new(
@@ -596,6 +611,7 @@ fn graph_common(
             ));
         }
     }
+
     // Cycle detection and callable-dependent parameter/type checks belong to M4.
     Ok(())
 }
@@ -604,28 +620,37 @@ impl WireDocument for SourceManifest {
     fn normalize(&mut self) -> Result<()> {
         path_name(&self.name)?;
         path_name(&self.module)?;
+
         if self.version.is_empty() {
             return Err(Error::new("E_VERSION", "version label cannot be empty"));
         }
+
         selector(&self.kernel)?;
+
         if self.sources.is_empty() {
             return Err(Error::new(
                 "E_SOURCE",
                 "at least one source file is required",
             ));
         }
+
         for source in &self.sources {
             relative_path(source)?;
         }
+
         set(&mut self.sources, "sources")?;
+
         unique(
             self.dependencies.iter().map(|d| d.alias.clone()),
             "dependencies",
         )?;
+
         for dependency in &self.dependencies {
             selector(&dependency.selector)?;
         }
+
         self.dependencies.sort_by(|a, b| a.alias.cmp(&b.alias));
+
         Ok(())
     }
 }
@@ -634,11 +659,14 @@ impl CallableContract {
     pub fn normalize(&mut self) -> Result<()> {
         ports(&self.parameters, "parameters")?;
         set(&mut self.effects, "effects")?;
+
         for effect in &self.effects {
             path_name(effect)?;
         }
+
         set(&mut self.required_bindings, "required_bindings")?;
         set(&mut self.capability_requirements, "capability_requirements")?;
+
         if self.kind == CallableKind::Function
             && (!self.effects.is_empty()
                 || !self.capability_requirements.is_empty()
@@ -661,13 +689,18 @@ impl WireDocument for MemoryRecord {
                 "slice0 memory exports exactly one callable",
             ));
         }
+
         self.exports[0].normalize()?;
+
         set(&mut self.dependencies, "dependencies")?;
         unique(self.source_map.iter().map(|s| s.path.clone()), "source_map")?;
+
         self.source_map.sort_by(|a, b| a.path.cmp(&b.path));
+
         for source in &self.source_map {
             relative_path(&source.path)?;
         }
+
         if let Implementation::Source { entry } = &self.implementation
             && (self.source_map.is_empty() || entry != &self.exports[0].export_name)
         {
@@ -683,9 +716,11 @@ impl WireDocument for MemoryRecord {
 impl WireDocument for BlueprintDraft {
     fn normalize(&mut self) -> Result<()> {
         path_name(&self.entry)?;
+
         for node in &self.nodes {
             selector(&node.selector)?;
         }
+
         graph_common(
             &self.inputs,
             &self.output,
@@ -693,7 +728,9 @@ impl WireDocument for BlueprintDraft {
             &mut self.connections,
             &mut self.order_edges,
         )?;
+
         self.nodes.sort_by(|a, b| a.id.cmp(&b.id));
+
         Ok(())
     }
 }
@@ -701,6 +738,7 @@ impl WireDocument for BlueprintDraft {
 impl WireDocument for ProgramSpec {
     fn normalize(&mut self) -> Result<()> {
         path_name(&self.entry)?;
+
         graph_common(
             &self.inputs,
             &self.output,
@@ -708,24 +746,31 @@ impl WireDocument for ProgramSpec {
             &mut self.connections,
             &mut self.order_edges,
         )?;
+
         self.nodes.sort_by(|a, b| a.id.cmp(&b.id));
+
         ports(&self.derived.inputs, "derived.inputs")?;
+
         if self.derived.inputs != self.inputs || self.derived.result_type != self.output.r#type {
             return Err(Error::new(
                 "E_DERIVED",
                 "derived input/result contract disagrees with graph interface",
             ));
         }
+
         set(&mut self.derived.dependencies, "derived.dependencies")?;
         set(&mut self.derived.effects, "derived.effects")?;
+
         set(
             &mut self.derived.required_bindings,
             "derived.required_bindings",
         )?;
+
         set(
             &mut self.derived.capability_requirements,
             "derived.capability_requirements",
         )?;
+
         // Effect/dependency summaries cannot be trusted until M3/M4 load exports.
         Ok(())
     }
@@ -736,14 +781,17 @@ impl WireDocument for LockRecord {
         for binding in &self.bindings {
             selector(&binding.selector)?;
         }
+
         unique(
             self.bindings
                 .iter()
                 .map(|b| (b.selector.clone(), b.export.clone())),
             "bindings",
         )?;
+
         self.bindings
             .sort_by(|a, b| (&a.selector, &a.export).cmp(&(&b.selector, &b.export)));
+
         set(&mut self.dependencies, "dependencies")
     }
 }
@@ -753,7 +801,9 @@ impl WireDocument for ApplicationManifest {
         if self.principal.is_empty() {
             return Err(Error::new("E_PRINCIPAL", "principal label cannot be empty"));
         }
+
         set(&mut self.requests, "requests")?;
+
         for request in &self.requests {
             if request.capability != "console.write" || request.resource != "stdout" {
                 return Err(Error::new(
@@ -762,6 +812,7 @@ impl WireDocument for ApplicationManifest {
                 ));
             }
         }
+
         for rule in &self.policies {
             if rule.operation != "std.console.write_line" || rule.resource != "stdout" {
                 return Err(Error::new(
@@ -770,6 +821,7 @@ impl WireDocument for ApplicationManifest {
                 ));
             }
         }
+
         Ok(())
     }
 }
@@ -791,14 +843,17 @@ impl WireDocument for EvidenceReport {
 impl WireDocument for FixtureSuite {
     fn normalize(&mut self) -> Result<()> {
         unique(self.cases.iter().map(|c| c.name.clone()), "cases")?;
+
         for case in &mut self.cases {
             set(&mut case.allow, "allow")?;
+
             if case.allow.iter().any(|a| a != "stdout") {
                 return Err(Error::new(
                     "E_UNSUPPORTED",
                     "slice0 fixture may allow only stdout",
                 ));
             }
+
             if case.expect.exit_code > 5 {
                 return Err(Error::new(
                     "E_EXIT",
@@ -806,6 +861,7 @@ impl WireDocument for FixtureSuite {
                 ));
             }
         }
+
         Ok(())
     }
 }

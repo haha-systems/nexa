@@ -29,6 +29,7 @@ pub fn named(name: &str) -> Result<Value> {
                 .map_err(|e| Error::new("E_SCHEMA", e.to_string()))?
         };
     }
+
     let mut value = match name {
         "memory-source" => schema!(SourceManifest),
         "memory" => schema!(MemoryRecord),
@@ -44,6 +45,8 @@ pub fn named(name: &str) -> Result<Value> {
         "value" => schema!(crate::value::Value),
         _ => return Err(Error::new("E_SCHEMA", format!("unknown schema: {name}"))),
     };
+
     value["$id"] = format!("https://nexa.invalid/schemas/{name}-0.3.schema.json").into();
+
     Ok(value)
 }
