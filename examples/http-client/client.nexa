@@ -1,0 +1,16 @@
+nexa 0.3
+module example.http_client
+
+export blueprint fetch_page {
+  input url is String
+  output result is Unit
+
+  node fetch = memory("local.http.fetch@0.1.0", export: "fetch")
+  node format = memory("local.http.format@0.1.0", export: "format")
+  node write = memory("local.console.line@1.0.0", export: "write")
+
+  connect input.url -> fetch.url
+  connect fetch.result -> format.body
+  connect format.result -> write.message
+  connect write.result -> output.result
+}

@@ -52,6 +52,16 @@ fn main() {
         println!("cargo:rerun-if-env-changed={key}");
         add(&mut hash, key, env::var(key).unwrap_or_default().as_bytes());
     }
+    // Cargo feature flags change the installed implementation even when source
+    // files and lockfile stay the same. Keep their fingerprint deterministic.
+    let mut features: Vec<_> = env::vars()
+        .filter(|(key, _)| key.starts_with("CARGO_FEATURE_"))
+        .collect();
+    features.sort();
+    for (key, value) in features {
+        println!("cargo:rerun-if-env-changed={key}");
+        add(&mut hash, &key, value.as_bytes());
+    }
     let compiler = Command::new(env::var_os("RUSTC").expect("Cargo supplies RUSTC"))
         .args(["--version", "--verbose"])
         .output()

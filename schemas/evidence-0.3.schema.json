@@ -172,6 +172,12 @@
     "FaultCode": {
       "enum": [
         "IO",
+        "HTTP_REQUEST",
+        "HTTP_STATUS",
+        "HTTP_TIMEOUT",
+        "HTTP_BODY_LIMIT",
+        "HTTP_UTF8",
+        "HTTP_TRANSPORT",
         "BUDGET_EXCEEDED",
         "BINDING_UNAVAILABLE",
         "KERNEL_MISMATCH",

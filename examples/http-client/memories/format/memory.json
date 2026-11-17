@@ -1,0 +1,10 @@
+{
+  "schema": "nexa.memory-source/0.3",
+  "name": "local.http.format",
+  "version": "0.1.0",
+  "module": "local.http.format",
+  "sources": ["src/main.nexa"],
+  "entry": "format",
+  "kernel": "std.slice0@0.3.0",
+  "dependencies": []
+}

@@ -9,6 +9,8 @@ pub mod contracts;
 pub mod diagnostic;
 pub mod digest;
 pub mod evidence;
+#[cfg(feature = "http-client")]
+pub mod http_client;
 pub mod kernel;
 pub mod memory;
 pub mod runtime;

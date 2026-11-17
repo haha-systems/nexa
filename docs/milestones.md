@@ -193,6 +193,8 @@ At this point, claim `slice0` support only. Passing these fixtures does not esta
 
 ## After Slice 0
 
+The first follow-on [HTTP client experiment](http-client-experiment.md) is implemented: an opt-in GET adapter, exact-origin authorization, and a three-memory client that can be saved and reused. Its [validation record](validation/http-client.md) covers local HTTP integration. A richer HTTP API and server still need the general-purpose foundations below.
+
 The full design extends beyond the first seven milestones. These directions are planned at a higher level; each needs its own bounded implementation plan before work begins.
 
 | Direction | Demonstration to aim for |
@@ -200,7 +202,7 @@ The full design extends beyond the first seven milestones. These directions are 
 | General-purpose foundation | A useful non-AI CLI using records, tagged unions, typed errors, branches, generics, and local bindings. |
 | Semantic memory tooling | Find an applicable implementation, inspect its evidence, and replace a component with precise compatibility/change diagnostics. |
 | Structured tasks and resources | A bounded concurrent service with cancellation, state snapshots, and tested cleanup. |
-| HTTP components | Assemble a minimal server from pinned memories and exercise it with integration tests. |
+| HTTP components | Extend the GET client with typed request/response values, then assemble a minimal server from pinned memories and exercise it with integration tests. |
 | Typed inference | Add one bounded AI feature with explicit context, validated output, budgets, and tool authority. |
 | Web inspector | Browse and expand components, edit their connections through the shared model, check the revision, then explicitly run it. |
 | Performance | Benchmark a specific assembly against a recorded workload, environment, and latency/error limits. |

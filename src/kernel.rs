@@ -28,6 +28,8 @@ pub struct KernelDescriptor {
     pub version: String,
     pub abi: String,
     pub implementation: Digest,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extensions: Vec<String>,
     pub operations: Vec<KernelOperation>,
 }
 
@@ -40,6 +42,60 @@ impl KernelDescriptor {
             })
         };
 
+        let operations = vec![
+            KernelOperation {
+                name: "std.text.trim_ascii".into(),
+                contract: CallableContract {
+                    export_name: Identifier::new("trim_ascii")?,
+                    kind: CallableKind::Function,
+                    parameters: vec![string_arg("text")?],
+                    result_type: ValueType::String,
+                    effects: vec![],
+                    required_bindings: vec![],
+                    capability_requirements: vec![],
+                },
+            },
+            KernelOperation {
+                name: "std.console.write_line".into(),
+                contract: CallableContract {
+                    export_name: Identifier::new("write_line")?,
+                    kind: CallableKind::Action,
+                    parameters: vec![string_arg("text")?],
+                    result_type: ValueType::Unit,
+                    effects: vec!["io.stdout".into()],
+                    required_bindings: vec!["std.console.write_line".into()],
+                    capability_requirements: vec![CapabilityRequest {
+                        capability: "console.write".into(),
+                        resource: "stdout".into(),
+                    }],
+                },
+            },
+        ];
+        #[cfg(feature = "http-client")]
+        let operations = {
+            let mut operations = operations;
+            operations.push(KernelOperation {
+                name: "std.http.get".into(),
+                contract: CallableContract {
+                    export_name: Identifier::new("get")?,
+                    kind: CallableKind::Action,
+                    parameters: vec![string_arg("url")?],
+                    result_type: ValueType::String,
+                    effects: vec!["net.http".into()],
+                    required_bindings: vec!["std.http.get".into()],
+                    capability_requirements: vec![CapabilityRequest {
+                        capability: "http.get".into(),
+                        resource: "url.origin".into(),
+                    }],
+                },
+            });
+            operations
+        };
+        #[cfg(not(feature = "http-client"))]
+        let extensions: Vec<String> = Vec::new();
+        #[cfg(feature = "http-client")]
+        let extensions = vec!["http-client/0.1".to_owned()];
+
         let mut descriptor = Self {
             schema: KernelSchema::V03,
             language: Language::V03,
@@ -48,35 +104,8 @@ impl KernelDescriptor {
             version: "0.3.0".into(),
             abi: "nexa.slice0.kernel/0.3".into(),
             implementation: env!("NEXA_IMPLEMENTATION_DIGEST").parse()?,
-            operations: vec![
-                KernelOperation {
-                    name: "std.text.trim_ascii".into(),
-                    contract: CallableContract {
-                        export_name: Identifier::new("trim_ascii")?,
-                        kind: CallableKind::Function,
-                        parameters: vec![string_arg("text")?],
-                        result_type: ValueType::String,
-                        effects: vec![],
-                        required_bindings: vec![],
-                        capability_requirements: vec![],
-                    },
-                },
-                KernelOperation {
-                    name: "std.console.write_line".into(),
-                    contract: CallableContract {
-                        export_name: Identifier::new("write_line")?,
-                        kind: CallableKind::Action,
-                        parameters: vec![string_arg("text")?],
-                        result_type: ValueType::Unit,
-                        effects: vec!["io.stdout".into()],
-                        required_bindings: vec!["std.console.write_line".into()],
-                        capability_requirements: vec![CapabilityRequest {
-                            capability: "console.write".into(),
-                            resource: "stdout".into(),
-                        }],
-                    },
-                },
-            ],
+            extensions,
+            operations,
         };
 
         descriptor.normalize()?;
@@ -87,6 +116,16 @@ impl KernelDescriptor {
 
 impl WireDocument for KernelDescriptor {
     fn normalize(&mut self) -> Result<()> {
+        let mut seen_extensions = BTreeSet::new();
+        for extension in &self.extensions {
+            if !seen_extensions.insert(extension) {
+                return Err(
+                    Error::new("E_DUPLICATE", "duplicate kernel extension").at("extensions")
+                );
+            }
+        }
+        self.extensions.sort();
+
         let mut seen = BTreeSet::new();
 
         for operation in &mut self.operations {

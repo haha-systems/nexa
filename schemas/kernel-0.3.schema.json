@@ -221,6 +221,12 @@
     "abi": {
       "type": "string"
     },
+    "extensions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "implementation": {
       "$ref": "#/$defs/Digest"
     },

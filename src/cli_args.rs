@@ -104,6 +104,7 @@ pub enum Command {
         input_file: PathBuf,
         #[arg(long)]
         manifest: PathBuf,
+        /// Grant stdout, or one exact HTTP(S) origin with the http-client adapter.
         #[arg(long)]
         allow: Vec<String>,
         #[arg(long)]

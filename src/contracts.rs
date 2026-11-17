@@ -819,24 +819,35 @@ impl WireDocument for ApplicationManifest {
             return Err(Error::new("E_PRINCIPAL", "principal label cannot be empty"));
         }
 
+        for request in &mut self.requests {
+            if request.capability == "console.write" && request.resource == "stdout" {
+                continue;
+            }
+            #[cfg(feature = "http-client")]
+            if request.capability == "http.get" {
+                request.resource = crate::http_client::canonical_origin_grant(&request.resource)?;
+                continue;
+            }
+            return Err(Error::new(
+                "E_UNSUPPORTED",
+                "slice0 supports only console.write on stdout and the optional http.get origin grant",
+            ));
+        }
         set(&mut self.requests, "requests")?;
 
-        for request in &self.requests {
-            if request.capability != "console.write" || request.resource != "stdout" {
-                return Err(Error::new(
-                    "E_UNSUPPORTED",
-                    "slice0 supports only console.write on stdout",
-                ));
+        for rule in &mut self.policies {
+            if rule.operation == "std.console.write_line" && rule.resource == "stdout" {
+                continue;
             }
-        }
-
-        for rule in &self.policies {
-            if rule.operation != "std.console.write_line" || rule.resource != "stdout" {
-                return Err(Error::new(
-                    "E_UNSUPPORTED",
-                    "slice0 policy targets only std.console.write_line on stdout",
-                ));
+            #[cfg(feature = "http-client")]
+            if rule.operation == "std.http.get" {
+                rule.resource = crate::http_client::canonical_origin_grant(&rule.resource)?;
+                continue;
             }
+            return Err(Error::new(
+                "E_UNSUPPORTED",
+                "slice0 policy targets only std.console.write_line on stdout and optional std.http.get origins",
+            ));
         }
 
         Ok(())
@@ -862,14 +873,22 @@ impl WireDocument for FixtureSuite {
         unique(self.cases.iter().map(|c| c.name.clone()), "cases")?;
 
         for case in &mut self.cases {
-            set(&mut case.allow, "allow")?;
-
-            if case.allow.iter().any(|a| a != "stdout") {
+            for resource in &mut case.allow {
+                if resource == "stdout" {
+                    continue;
+                }
+                #[cfg(feature = "http-client")]
+                {
+                    *resource = crate::http_client::canonical_origin_grant(resource)?;
+                    continue;
+                }
+                #[cfg(not(feature = "http-client"))]
                 return Err(Error::new(
                     "E_UNSUPPORTED",
                     "slice0 fixture may allow only stdout",
                 ));
             }
+            set(&mut case.allow, "allow")?;
 
             if case.expect.exit_code > 5 {
                 return Err(Error::new(

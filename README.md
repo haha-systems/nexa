@@ -6,6 +6,8 @@ Nexa is a proposed general-purpose, AI-first language with typed component compo
 
 Start with the [runnable Slice 0 demo](docs/slice0-demo.md), [validation record](docs/validation/slice0.md), or [milestones](docs/milestones.md). The [language specification](docs/nexa-language-specification-0.3.md), [implementation plan](docs/nexa-functional-slice-plan.md), [M0 Rust walkthrough](docs/m0-walkthrough.md), and [Slice 0 code walkthrough](docs/slice0-walkthrough.md) provide the detail.
 
+The first [HTTP client experiment](docs/http-client-experiment.md) adds an opt-in GET adapter: `cargo build --locked --features http-client`. A Nexa blueprint composes fetch, format, and console memories, checks exact-origin authority before network dispatch, and can itself become a reusable memory. The default build stays local-only.
+
 ## Build and try it
 
 Rust 1.100.0, rustfmt, and Clippy are pinned in `rust-toolchain.toml`; Cargo dependencies are pinned in `Cargo.lock`. With rustup installed:
@@ -44,6 +46,8 @@ cargo run --locked -- hash examples/hello/memories/greet/src/main.nexa --kind ra
 cargo fmt --all -- --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
+cargo test --locked --features http-client
+cargo clippy --all-targets --locked --features http-client -- -D warnings
 cargo run --locked -- schemas --out-dir schemas
 git diff --exit-code -- schemas
 ```
@@ -56,7 +60,7 @@ The tests cover the original foundation plus source evaluation, type/effect erro
 
 Slice 0 supports `String`/`Unit`, one exported callable per single-file source memory, private acyclic helpers, literals/concatenation/calls, `std.text.trim_ascii`, and authorized `std.console.write_line`. Blueprint memories are finite typed DAGs. Both source and JSON construction use exact locked memory references. Inspections are bounded and have revision/query-bound cursors.
 
-Source imports, multi-file source bundles, general data/control-flow features, explicit Pulse source syntax, tasks, networking, models, and human-approval resumption remain outside this profile. Source nesting/call-graph depth is bounded. A changed implementation fingerprint requires resealing memories and rebuilding locks; artifacts never silently adopt the new kernel.
+Source imports, multi-file source bundles, general data/control-flow features, explicit Pulse source syntax, tasks, models, and human-approval resumption remain outside this profile. Networking requires the optional `http-client/0.1` kernel extension, currently limited to HTTP(S) GET returning bounded UTF-8 text. Source nesting/call-graph depth is bounded. A changed implementation fingerprint, including a changed Cargo feature set, requires resealing memories and rebuilding locks; artifacts never silently adopt the new kernel.
 
 ## Cloud workspace toolchain
 

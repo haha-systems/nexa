@@ -1,0 +1,6 @@
+nexa 0.3
+module local.http.format
+
+export fn format(body is String) -> String {
+  return "Response: " + body
+}

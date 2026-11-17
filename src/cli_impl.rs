@@ -60,24 +60,8 @@ fn checked_program(path: &Path, store: &Store) -> Result<(ProgramSpec, blueprint
 }
 
 fn launch_context(manifest: ApplicationManifest, allow: &[String]) -> Result<ExecutionContext> {
-    let mut seen = BTreeSet::new();
-    for resource in allow {
-        if resource != "stdout" {
-            return Err(Error::new(
-                "E_UNSUPPORTED",
-                "slice0 grants only the stdout resource",
-            ));
-        }
-        if !seen.insert(resource) {
-            return Err(Error::new("E_DUPLICATE", "duplicate launch resource"));
-        }
-    }
     let bound_principal = manifest.principal.clone();
-    ExecutionContext::from_manifest(
-        manifest,
-        bound_principal,
-        allow.iter().any(|r| r == "stdout"),
-    )
+    ExecutionContext::from_manifest_with_resources(manifest, bound_principal, allow)
 }
 
 fn invocation_id() -> String {

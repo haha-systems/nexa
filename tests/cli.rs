@@ -42,8 +42,16 @@ fn kernel_is_inspectable_without_invoking_its_console_operation() {
     assert_eq!(value["descriptor"]["profile"], "slice0");
     assert_eq!(
         value["descriptor"]["operations"].as_array().unwrap().len(),
-        2
+        if cfg!(feature = "http-client") { 3 } else { 2 }
     );
+    if cfg!(feature = "http-client") {
+        assert_eq!(
+            value["descriptor"]["extensions"],
+            json!(["http-client/0.1"])
+        );
+    } else {
+        assert!(value["descriptor"].get("extensions").is_none());
+    }
     let expected = nexa::canonical::digest(&value["descriptor"]).unwrap();
     assert_eq!(value["digest"], json!(expected));
     assert!(output.stderr.is_empty());

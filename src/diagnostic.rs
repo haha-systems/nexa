@@ -72,6 +72,12 @@ pub enum ExitCode {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FaultCode {
     Io,
+    HttpRequest,
+    HttpStatus,
+    HttpTimeout,
+    HttpBodyLimit,
+    HttpUtf8,
+    HttpTransport,
     BudgetExceeded,
     BindingUnavailable,
     KernelMismatch,

@@ -1,0 +1,12 @@
+{
+  "schema": "nexa.application/0.3",
+  "principal": "app:http-client",
+  "requests": [
+    {"capability": "http.get", "resource": "http://127.0.0.1:8765"},
+    {"capability": "console.write", "resource": "stdout"}
+  ],
+  "policies": [
+    {"operation": "std.http.get", "resource": "http://127.0.0.1:8765", "decision": "allow"},
+    {"operation": "std.console.write_line", "resource": "stdout", "decision": "allow"}
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schema": "nexa.fixtures/0.3",
+  "cases": [
+    {
+      "name": "get-local-text",
+      "input": {"url":"http://127.0.0.1:8765/message.txt"},
+      "allow": ["stdout", "http://127.0.0.1:8765"],
+      "expect": {
+        "stdout": "Response: Hello from HTTP\n",
+        "result": {"type":"Unit", "value":null},
+        "status": "Succeeded",
+        "exit_code": 0
+      }
+    },
+    {
+      "name": "deny-without-origin-grant",
+      "input": {"url":"http://127.0.0.1:8765/message.txt"},
+      "allow": ["stdout"],
+      "expect": {
+        "stdout": "",
+        "result": {"type":"Unit", "value":null},
+        "status": "Denied",
+        "exit_code": 3
+      }
+    },
+    {
+      "name": "missing-page-fault",
+      "input": {"url":"http://127.0.0.1:8765/missing.txt"},
+      "allow": ["stdout", "http://127.0.0.1:8765"],
+      "expect": {
+        "stdout": "",
+        "result": {"type":"Unit", "value":null},
+        "status": "Failed",
+        "exit_code": 1
+      }
+    },
+    {
+      "name": "invalid-url-fault",
+      "input": {"url":"not a url"},
+      "allow": ["stdout", "http://127.0.0.1:8765"],
+      "expect": {
+        "stdout": "",
+        "result": {"type":"Unit", "value":null},
+        "status": "Failed",
+        "exit_code": 1
+      }
+    }
+  ]
+}

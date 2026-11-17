@@ -593,6 +593,8 @@ Host embedding supplies the same checked program objects, binding API, authoriza
 
 Required full-language library families are collections, text/bytes, checked numeric operations, exact decimals, time/calendar, results, serialization, resources, tasks/channels, state, effects, identity/policy, Pulse/receipts, memory/blueprints, inspection, and inference contracts. Concrete network/database/model/MCP providers are optional adapters.
 
+The reference implementation's optional `http-client/0.1` extension supplies `std.http.get(String) -> String effects {net.http}` under exact-origin `http.get` authority. It is a bounded UTF-8 GET experiment using the existing source syntax, separate from the base Slice 0 requirements. The [adapter contract and reproduction guide](http-client-experiment.md) define its limits.
+
 `std.text.trim_ascii(text)` is pure and removes only leading/trailing U+0009 through U+000D and U+0020. It does not normalize or strip other Unicode characters. `std.console.write_line(text)` is an action with effect `io.stdout`, capability `console.write` scoped to stdout, and result `Unit`. It writes UTF-8 plus one LF; write failure is an operational fault and may follow partial output. `print` is not a pure function.
 
 MCP tools, HTTP operations, database calls, and model connectors share action, effect, provenance, and authorization contracts. Connector-specific protocols remain versioned dependencies. Dynamic tool discovery produces untrusted metadata and proposed interfaces; using a changed interface requires validation and, for portable programs, a new lock. This specification does not select a current MCP protocol version.
@@ -791,6 +793,8 @@ Old actor arguments become execution-context requirements where appropriate. `? 
 The standalone/embedding invariant applies to semantic plans and protected effects. Binary Pulse IR compatibility with draft 0.2 is not promised. Memory records pin language/profile/ABI versions, and incompatible memories require explicit recompilation or a validated adapter.
 
 ## 24. Slice 0: exact minimum implementation profile
+
+This section defines the base local profile. The reference binary can additionally advertise the optional `http-client/0.1` kernel extension when built with Cargo feature `http-client`. Its third operation and origin authority are defined in the [HTTP experiment](http-client-experiment.md); they do not expand the base profile's conformance requirements. Kernel descriptors/pins distinguish the builds, and changing features requires resealing/relocking.
 
 ### 24.1 Supported source and runtime
 

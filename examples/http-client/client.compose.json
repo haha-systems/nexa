@@ -1,0 +1,84 @@
+{
+  "schema": "nexa.blueprint-draft/0.3",
+  "language": "0.3",
+  "profile": "slice0",
+  "entry": "example.http_client.fetch_page",
+  "inputs": [
+    {
+      "name": "url",
+      "type": "String"
+    }
+  ],
+  "output": {
+    "name": "result",
+    "type": "Unit"
+  },
+  "nodes": [
+    {
+      "id": "fetch",
+      "selector": "local.http.fetch@0.1.0",
+      "export": "fetch"
+    },
+    {
+      "id": "format",
+      "selector": "local.http.format@0.1.0",
+      "export": "format"
+    },
+    {
+      "id": "write",
+      "selector": "local.console.line@1.0.0",
+      "export": "write"
+    }
+  ],
+  "connections": [
+    {
+      "from": {
+        "kind": "input",
+        "port": "url"
+      },
+      "to": {
+        "kind": "node",
+        "node": "fetch",
+        "port": "url"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node": "fetch",
+        "port": "result"
+      },
+      "to": {
+        "kind": "node",
+        "node": "format",
+        "port": "body"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node": "format",
+        "port": "result"
+      },
+      "to": {
+        "kind": "node",
+        "node": "write",
+        "port": "message"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node": "write",
+        "port": "result"
+      },
+      "to": {
+        "kind": "output",
+        "port": "result"
+      }
+    }
+  ],
+  "order_edges": [],
+  "settings": [],
+  "requirements": []
+}

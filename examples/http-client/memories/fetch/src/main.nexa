@@ -1,0 +1,6 @@
+nexa 0.3
+module local.http.fetch
+
+export action fetch(url is String) -> String effects {net.http} {
+  return std.http.get(url)
+}
