@@ -1,0 +1,98 @@
+nexa 0.3
+module example.native_http.headers
+
+import decimal
+
+export type Field is {
+  name is Bytes
+  value is Bytes
+}
+
+export type Framing is ordinary | content_length(length is Int) | transfer_encoding
+
+export type Parsed is {
+  field is Field
+  framing is Framing
+}
+
+fn is_token(byte is Int) -> Bool {
+  return (byte >= 48 and byte <= 57) or (byte >= 65 and byte <= 90) or (byte >= 97 and byte <= 122) or
+    byte == 33 or byte == 35 or byte == 36 or byte == 37 or byte == 38 or byte == 39 or
+    byte == 42 or byte == 43 or byte == 45 or byte == 46 or byte == 94 or byte == 95 or
+    byte == 96 or byte == 124 or byte == 126
+}
+
+fn is_ows(byte is Int) -> Bool {
+  return byte == 32 or byte == 9
+}
+
+fn name_equals(name is Bytes, lower_case is Bytes) -> Bool {
+  let length = bytes.len(name)
+  if length != bytes.len(lower_case) {
+    return false
+  }
+  var cursor = 0
+  while cursor < length {
+    var byte = bytes.at(name, cursor)
+    if byte >= 65 and byte <= 90 {
+      byte = byte + 32
+    }
+    if byte != bytes.at(lower_case, cursor) {
+      return false
+    }
+    cursor = cursor + 1
+  }
+  return true
+}
+
+fn classify(field is Field) -> Result[Parsed, String] {
+  if name_equals(field.name, bytes.encode_utf8("content-length")) {
+    match decimal.scan(field.value, 9223372036854775807) {
+      Result.ok(value: length) => {
+        return Result.ok(value: Parsed { field: field, framing: Framing.content_length(length: length) })
+      }
+      Result.err(error: error) => {
+        return Result.err(error: error)
+      }
+    }
+  }
+  if name_equals(field.name, bytes.encode_utf8("transfer-encoding")) {
+    return Result.ok(value: Parsed { field: field, framing: Framing.transfer_encoding() })
+  }
+  return Result.ok(value: Parsed { field: field, framing: Framing.ordinary() })
+}
+
+export fn parse(line is Bytes) -> Result[Parsed, String] {
+  let length = bytes.len(line)
+  if length > 8192 {
+    return Result.err(error: "head_limit")
+  }
+
+  var colon = 0
+  while colon < length and is_token(bytes.at(line, colon)) {
+    colon = colon + 1
+  }
+  if colon == 0 or colon == length or bytes.at(line, colon) != 58 {
+    return Result.err(error: "invalid_field_name")
+  }
+
+  var start = colon + 1
+  while start < length and is_ows(bytes.at(line, start)) {
+    start = start + 1
+  }
+  var end = length
+  while end > start and is_ows(bytes.at(line, end - 1)) {
+    end = end - 1
+  }
+  var cursor = start
+  while cursor < end {
+    let byte = bytes.at(line, cursor)
+    if (byte < 32 and byte != 9) or byte == 127 {
+      return Result.err(error: "invalid_field_value")
+    }
+    cursor = cursor + 1
+  }
+
+  let field = Field { name: bytes.slice(line, 0, colon), value: bytes.slice(line, start, end) }
+  return classify(field)
+}

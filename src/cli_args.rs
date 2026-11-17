@@ -25,6 +25,11 @@ pub enum Command {
     },
     /// Print the installed kernel descriptor without invoking it.
     Kernel,
+    /// Seal, inspect, and run pure Core1 source memories.
+    Core1 {
+        #[command(subcommand)]
+        command: Core1Command,
+    },
     /// Print one generated JSON Schema.
     Schema { name: String },
     /// Write all generated JSON Schemas to a directory.
@@ -146,6 +151,38 @@ pub enum MemoryCommand {
         #[arg(long)]
         json: bool,
         #[arg(long, default_value = ".nexa/store")]
+        store: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum Core1Command {
+    /// Check and seal a module and its exact imported memories.
+    Seal {
+        source: PathBuf,
+        /// Bind a declared import as alias=sha256:digest. Repeat for each import.
+        #[arg(long = "import")]
+        imports: Vec<String>,
+        #[arg(long, default_value = ".nexa/core1-store")]
+        store: PathBuf,
+    },
+    /// Verify a sealed memory and display its signature and imports.
+    Inspect {
+        digest: String,
+        /// Include the verified records of all transitive imports.
+        #[arg(long)]
+        closure: bool,
+        #[arg(long, default_value = ".nexa/core1-store")]
+        store: PathBuf,
+    },
+    /// Evaluate the sealed memory's pure entry.
+    Run {
+        digest: String,
+        #[arg(long)]
+        input_file: PathBuf,
+        #[arg(long, default_value_t = nexa::core1::DEFAULT_FUEL)]
+        fuel: u64,
+        #[arg(long, default_value = ".nexa/core1-store")]
         store: PathBuf,
     },
 }

@@ -479,6 +479,7 @@ pub fn normalized_json(bytes: &[u8]) -> Result<serde_json::Value> {
     }
 
     match schema {
+        "nexa.core1-memory/0.1" => decoded!(crate::core1::Memory),
         "nexa.memory-source/0.3" => decoded!(SourceManifest),
         "nexa.memory/0.3" => decoded!(MemoryRecord),
         "nexa.blueprint-draft/0.3" => decoded!(BlueprintDraft),

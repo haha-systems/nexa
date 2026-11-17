@@ -1,0 +1,26 @@
+nexa 0.3
+module example.native_http.decimal
+
+export fn scan(digits is Bytes, limit is Int) -> Result[Int, String] {
+  let length = bytes.len(digits)
+  if limit < 0 or length == 0 {
+    return Result.err(error: "invalid_decimal")
+  }
+
+  let quotient = limit / 10
+  let remainder = limit % 10
+  var cursor = 0
+  var number = 0
+  while cursor < length {
+    let digit = bytes.at(digits, cursor) - 48
+    if digit < 0 or digit > 9 {
+      return Result.err(error: "invalid_decimal")
+    }
+    if number > quotient or (number == quotient and digit > remainder) {
+      return Result.err(error: "decimal_limit")
+    }
+    number = number * 10 + digit
+    cursor = cursor + 1
+  }
+  return Result.ok(value: number)
+}

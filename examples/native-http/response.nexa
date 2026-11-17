@@ -1,0 +1,321 @@
+nexa 0.3
+module example.native_http.response
+
+import headers
+
+export type Response is {
+  status is Int
+  headers is List[headers.Field]
+  body is Bytes
+}
+
+export type State is start |
+  head(prefix is Bytes, pending_cr is Bool, empty_line is Bool, interim is Int) |
+  body(status is Int, fields is List[headers.Field], prefix is Bytes, remaining is Int)
+
+export type Step is needs_more(next is State) |
+  complete(value is Response, remainder is Bytes) |
+  malformed(error is String)
+
+type Scan is pending(prefix is Bytes, pending_cr is Bool, empty_line is Bool) |
+  ready(head is Bytes, offset is Int) |
+  failed(error is String)
+
+type Frame is interim | empty | fixed(length is Int)
+
+type Head is {
+  status is Int
+  fields is List[headers.Field]
+  frame is Frame
+}
+
+fn head_limit() -> Int {
+  return 8192
+}
+
+fn body_limit() -> Int {
+  return 65536
+}
+
+fn field_limit() -> Int {
+  return 64
+}
+
+fn interim_limit() -> Int {
+  return 8
+}
+
+fn minimum(left is Int, right is Int) -> Int {
+  if left < right {
+    return left
+  }
+  return right
+}
+
+// Scan only the new chunk. The saved flags carry line boundaries across reads.
+fn scan_head(prefix is Bytes, pending_cr is Bool, empty_line is Bool, chunk is Bytes, offset is Int, eof is Bool) -> Scan {
+  let allowance = head_limit() - bytes.len(prefix)
+  let take = minimum(bytes.len(chunk) - offset, allowance)
+  let end = offset + take
+  var cursor = offset
+  var cr = pending_cr
+  var empty = empty_line
+  while cursor < end {
+    let byte = bytes.at(chunk, cursor)
+    cursor = cursor + 1
+    if cr {
+      if byte != 10 {
+        return Scan.failed(error: "invalid_line_ending")
+      }
+      if empty {
+        let head = bytes.concat(prefix, bytes.slice(chunk, offset, cursor))
+        return Scan.ready(head: head, offset: cursor)
+      }
+      cr = false
+      empty = true
+    } else if byte == 13 {
+      cr = true
+    } else if byte == 10 {
+      return Scan.failed(error: "invalid_line_ending")
+    } else {
+      empty = false
+    }
+  }
+
+  if take == allowance {
+    return Scan.failed(error: "head_limit")
+  }
+  if eof {
+    return Scan.failed(error: "unexpected_eof_head")
+  }
+  if take == 0 {
+    return Scan.pending(prefix: prefix, pending_cr: cr, empty_line: empty)
+  }
+  let saved = bytes.concat(prefix, bytes.slice(chunk, offset, end))
+  return Scan.pending(prefix: saved, pending_cr: cr, empty_line: empty)
+}
+
+fn line_end(head is Bytes, start is Int) -> Int {
+  let length = bytes.len(head)
+  var cursor = start
+  while cursor + 1 < length {
+    let byte = bytes.at(head, cursor)
+    if byte == 13 and bytes.at(head, cursor + 1) == 10 {
+      return cursor
+    }
+    if byte == 10 or byte == 13 {
+      return -1
+    }
+    cursor = cursor + 1
+  }
+  return -1
+}
+
+fn decode_status(line is Bytes) -> Result[Int, String] {
+  let length = bytes.len(line)
+  if length < 13 or bytes.slice(line, 0, 9) != bytes.encode_utf8("HTTP/1.1 ") or bytes.at(line, 12) != 32 {
+    return Result.err(error: "invalid_status_line")
+  }
+
+  let hundreds = bytes.at(line, 9) - 48
+  let tens = bytes.at(line, 10) - 48
+  let units = bytes.at(line, 11) - 48
+  if hundreds < 1 or hundreds > 5 or tens < 0 or tens > 9 or units < 0 or units > 9 {
+    return Result.err(error: "invalid_status_line")
+  }
+
+  var cursor = 13
+  while cursor < length {
+    let byte = bytes.at(line, cursor)
+    if (byte < 32 and byte != 9) or byte == 127 {
+      return Result.err(error: "invalid_status_line")
+    }
+    cursor = cursor + 1
+  }
+  return Result.ok(value: hundreds * 100 + tens * 10 + units)
+}
+
+fn frame_head(status is Int, fields is List[headers.Field], length is Int, transfer_encoding is Bool) -> Result[Head, String] {
+  if transfer_encoding and length >= 0 {
+    return Result.err(error: "ambiguous_framing")
+  }
+  if transfer_encoding {
+    return Result.err(error: "unsupported_transfer_encoding")
+  }
+  if status == 101 {
+    return Result.err(error: "unsupported_protocol_switch")
+  }
+
+  var frame = Frame.empty()
+  if status < 200 or status == 204 {
+    if length >= 0 {
+      return Result.err(error: "unexpected_content_length")
+    }
+    if status < 200 {
+      frame = Frame.interim()
+    }
+  } else if status != 304 {
+    if length < 0 {
+      return Result.err(error: "missing_content_length")
+    }
+    if status == 205 and length != 0 {
+      return Result.err(error: "unexpected_content_length")
+    }
+    if length > body_limit() {
+      return Result.err(error: "body_limit")
+    }
+    frame = Frame.fixed(length: length)
+  }
+  return Result.ok(value: Head { status: status, fields: fields, frame: frame })
+}
+
+fn decode_fields(head is Bytes, offset is Int, status is Int) -> Result[Head, String] {
+  let length = bytes.len(head)
+  var cursor = offset
+  var fields is List[headers.Field] = []
+  var content_length = -1
+  var transfer_encoding = false
+  while cursor < length {
+    let end = line_end(head, cursor)
+    if end < cursor {
+      return Result.err(error: "invalid_line_ending")
+    }
+    if end == cursor {
+      if cursor + 2 != length {
+        return Result.err(error: "invalid_head")
+      }
+      return frame_head(status, fields, content_length, transfer_encoding)
+    }
+    if list.len(fields) == field_limit() {
+      return Result.err(error: "field_limit")
+    }
+
+    match headers.parse(bytes.slice(head, cursor, end)) {
+      Result.err(error: error) => {
+        return Result.err(error: error)
+      }
+      Result.ok(value: parsed) => {
+        fields = list.push(fields, parsed.field)
+        match parsed.framing {
+          headers.Framing.ordinary => {
+          }
+          headers.Framing.content_length(length: size) => {
+            if content_length >= 0 {
+              return Result.err(error: "duplicate_content_length")
+            }
+            content_length = size
+          }
+          headers.Framing.transfer_encoding => {
+            transfer_encoding = true
+          }
+        }
+      }
+    }
+    cursor = end + 2
+  }
+  return Result.err(error: "invalid_head")
+}
+
+fn decode_head(head is Bytes) -> Result[Head, String] {
+  let end = line_end(head, 0)
+  if end < 0 {
+    return Result.err(error: "invalid_line_ending")
+  }
+  match decode_status(bytes.slice(head, 0, end)) {
+    Result.err(error: error) => {
+      return Result.err(error: error)
+    }
+    Result.ok(value: status) => {
+      return decode_fields(head, end + 2, status)
+    }
+  }
+}
+
+fn read_body(status is Int, fields is List[headers.Field], prefix is Bytes, remaining is Int, chunk is Bytes, offset is Int, eof is Bool) -> Step {
+  let length = bytes.len(chunk)
+  let take = minimum(remaining, length - offset)
+  if take < remaining and eof {
+    return Step.malformed(error: "unexpected_eof_body")
+  }
+  if take == 0 and remaining > 0 {
+    return Step.needs_more(next: State.body(status: status, fields: fields, prefix: prefix, remaining: remaining))
+  }
+
+  let end = offset + take
+  let body = bytes.concat(prefix, bytes.slice(chunk, offset, end))
+  if take == remaining {
+    return Step.complete(
+      value: Response { status: status, headers: fields, body: body },
+      remainder: bytes.slice(chunk, end, length)
+    )
+  }
+  return Step.needs_more(next: State.body(status: status, fields: fields, prefix: body, remaining: remaining - take))
+}
+
+fn read_heads(prefix is Bytes, pending_cr is Bool, empty_line is Bool, interim is Int, chunk is Bytes, eof is Bool) -> Step {
+  var saved = prefix
+  var cr = pending_cr
+  var empty = empty_line
+  var count = interim
+  var offset = 0
+  while true {
+    match scan_head(saved, cr, empty, chunk, offset, eof) {
+      Scan.pending(prefix: partial, pending_cr: pending, empty_line: at_start) => {
+        return Step.needs_more(next: State.head(prefix: partial, pending_cr: pending, empty_line: at_start, interim: count))
+      }
+      Scan.failed(error: error) => {
+        return Step.malformed(error: error)
+      }
+      Scan.ready(head: head, offset: next_offset) => {
+        match decode_head(head) {
+          Result.err(error: error) => {
+            return Step.malformed(error: error)
+          }
+          Result.ok(value: parsed) => {
+            match parsed.frame {
+              Frame.interim => {
+                if count == interim_limit() {
+                  return Step.malformed(error: "interim_limit")
+                }
+                count = count + 1
+                offset = next_offset
+                saved = hex""
+                cr = false
+                empty = true
+              }
+              Frame.empty => {
+                return read_body(parsed.status, parsed.fields, hex"", 0, chunk, next_offset, eof)
+              }
+              Frame.fixed(length: size) => {
+                return read_body(parsed.status, parsed.fields, hex"", size, chunk, next_offset, eof)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+export fn decode(previous is State, chunk is Bytes, eof is Bool) -> Step {
+  match previous {
+    State.start => {
+      return read_heads(hex"", false, true, 0, chunk, eof)
+    }
+    State.head(prefix: prefix, pending_cr: pending, empty_line: empty, interim: interim) => {
+      if bytes.len(prefix) >= head_limit() or interim < 0 or interim > interim_limit() {
+        return Step.malformed(error: "invalid_state")
+      }
+      return read_heads(prefix, pending, empty, interim, chunk, eof)
+    }
+    State.body(status: status, fields: fields, prefix: prefix, remaining: remaining) => {
+      if status < 200 or status > 599 or status == 204 or status == 205 or status == 304 {
+        return Step.malformed(error: "invalid_state")
+      }
+      if remaining <= 0 or remaining > body_limit() - bytes.len(prefix) or list.len(fields) > field_limit() {
+        return Step.malformed(error: "invalid_state")
+      }
+      return read_body(status, fields, prefix, remaining, chunk, 0, eof)
+    }
+  }
+}

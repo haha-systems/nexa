@@ -1,6 +1,6 @@
 # Native Nexa HTTP client: proposed memory inventory
 
-**Status:** Investigation and proposed build order. No protocol implementation or new language profile is delivered by this document.
+**Status:** The experimental Core1 profile and a pure HTTP/1.1 codec proof cover the first two gates. The [Core1 guide](core1.md) and [example](../examples/native-http/README.md) describe the implemented subset. Raw networking and the full method and framing matrix remain proposed.
 
 The next composability proof is an HTTP client whose request construction, response parsing, framing, and orchestration are Nexa source memories. The current [GET experiment](http-client-experiment.md) establishes composition around a Rust HTTP adapter. This proposal moves that protocol implementation into Nexa.
 
@@ -130,4 +130,4 @@ Authorization must precede network effects and remain bound to concrete destinat
 5. **Hostname and secure-channel stages.** Choose and label host-provided versus Nexa implementations. A native DNS resolver adds DNS wire-codec/resolver memories over UDP/TCP, transaction correlation, bounded retries and fallback; it is not just a TCP helper. HTTPS adds its separately chosen TLS dependency and verification gates. Neither is covered by the literal-address proof.
 6. **Optional client policies.** Add redirect, retry, pooling, streaming bodies, decoding, cookie/authentication, or proxy memories individually. Each carries its own contract and evidence; none is silently inherited from a native HTTP library.
 
-The next implementation target should be gates 1–2: **independently sealed Nexa codecs composed into a byte-level HTTP exchange model, with no network dependency**. Gate 3 then proves that the same codecs work over raw sockets. This order produces evidence at the first useful layer and makes language gaps visible before transport code can conceal them.
+The first example covers gates 1–2 with independently sealed Nexa codecs and a fixture-driven exchange. Gate 3 will test this composition over raw sockets using scoped stream primitives.

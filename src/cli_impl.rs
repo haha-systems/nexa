@@ -1,5 +1,5 @@
 use crate::{
-    cli_args::{Command, HashKind, MemoryCommand},
+    cli_args::{Command, Core1Command, HashKind, MemoryCommand},
     cli_support::{self, document, inputs, json, pretty, read, text, write_bytes, write_document},
 };
 use nexa::{
@@ -7,6 +7,7 @@ use nexa::{
     contracts::{
         ApplicationManifest, BlueprintDraft, CaseObservation, FixtureSuite, ProgramSpec, Receipt,
     },
+    core1,
     diagnostic::{Error, ExitCode, Result},
     digest::Digest,
     evidence::{self, FixtureInputs},
@@ -17,7 +18,7 @@ use nexa::{
 };
 use serde_json::{Value as Json, json as object};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs::{self, File},
     io::{self, Write},
     path::{Path, PathBuf},
@@ -100,6 +101,7 @@ fn prepare_receipt(path: &Path) -> Result<File> {
 
 pub fn execute(command: Command) -> Result<Output> {
     match command {
+        Command::Core1 { command } => core1_command(command),
         Command::Canonicalize { path } => Ok(Output::success(canonical::encode(
             &canonical::parse(&read(&path)?)?,
         )?)),
@@ -395,6 +397,61 @@ pub fn execute(command: Command) -> Result<Output> {
                     ExitCode::RuntimeFailure
                 },
             })
+        }
+    }
+}
+
+fn core1_command(command: Core1Command) -> Result<Output> {
+    match command {
+        Core1Command::Seal {
+            source,
+            imports,
+            store,
+        } => {
+            let mut pinned = BTreeMap::new();
+            for entry in imports {
+                let (alias, digest) = entry
+                    .split_once('=')
+                    .ok_or_else(|| Error::new("E_IMPORT", "expected alias=sha256:digest"))?;
+                if pinned.insert(alias.to_owned(), digest.parse()?).is_some() {
+                    return Err(Error::new("E_IMPORT", format!("duplicate import {alias}")));
+                }
+            }
+            let bytes = core1::read_bounded(&source, core1::SOURCE_LIMIT)?;
+            let text = std::str::from_utf8(&bytes).map_err(|error| {
+                Error::new("E_UTF8", error.to_string()).at(source.display().to_string())
+            })?;
+            let store = Store::open(store)?;
+            let digest = core1::seal(&store, &source.display().to_string(), text, pinned)?;
+            Ok(Output::digest(&digest))
+        }
+        Core1Command::Inspect {
+            digest,
+            closure,
+            store,
+        } => {
+            let digest = digest.parse()?;
+            let store = Store::open(store)?;
+            let bytes = if closure {
+                pretty(&object!({
+                    "subject": digest,
+                    "memories": core1::inspect_closure(&store, &digest)?,
+                }))?
+            } else {
+                pretty(&core1::inspect(&store, &digest)?)?
+            };
+            Ok(Output::success(bytes))
+        }
+        Core1Command::Run {
+            digest,
+            input_file,
+            fuel,
+            store,
+        } => {
+            let input = core1::read_bounded(&input_file, core1::INPUT_LIMIT)?;
+            let args = canonical::parse(&input)?;
+            let value = core1::run(&Store::open(store)?, &digest.parse()?, &args, fuel)?;
+            Ok(Output::success(pretty(&value)?))
         }
     }
 }

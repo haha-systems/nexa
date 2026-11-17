@@ -197,7 +197,7 @@ The first follow-on [HTTP client experiment](http-client-experiment.md) is imple
 
 The [web workbench](dashboard.md) adds the first browser interface over those existing contracts: memory browsing, a typed node editor, build inspection, authorized playground execution, and session receipts. Its local Rust API uses the same compiler/runtime as the CLI. Hosted snapshot previews support browsing and graph editing; execution requires the local runtime.
 
-The next proposed proof is a [native Nexa HTTP client](native-http-client-plan.md): byte-level protocol memories over raw networking, with general-purpose values/control flow and locked source imports implemented first. The plan inventories dependencies and separates Nexa protocol logic from OS primitives; implementation has not started.
+The [native Nexa HTTP client plan](native-http-client-plan.md) starts with the experimental [Core1 profile](core1.md). Core1 adds typed byte processing and locked source imports. The fixture-driven HTTP/1.1 example composes separately sealed codecs. Raw TCP and the remaining HTTP methods and framing modes are later gates.
 
 The full design extends beyond the first seven milestones. These directions are planned at a higher level; each needs its own bounded implementation plan before work begins.
 

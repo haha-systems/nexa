@@ -1,0 +1,652 @@
+{
+  "cases": [
+    {
+      "name": "fragmented-binary-404",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120343034204e6f7420466f756e640d",
+          "0a634f6e54654e74",
+          "2d4c654e6754683a20360d0a582d54726163653a0920666972737420090d0a582d54726163653a207365636f6e64ff0d0a0d",
+          "",
+          "0a00",
+          "ff0d0a804172",
+          "656d61696e64657200ff"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "complete",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "response": {
+            "status": "404",
+            "headers": [
+              {
+                "name": "634f6e54654e742d4c654e675468",
+                "value": "36"
+              },
+              {
+                "name": "582d5472616365",
+                "value": "6669727374"
+              },
+              {
+                "name": "582d5472616365",
+                "value": "7365636f6e64ff"
+              }
+            ],
+            "body": "00ff0d0a8041"
+          },
+          "remainder": "72656d61696e64657200ff"
+        }
+      }
+    },
+    {
+      "name": "unfragmented-binary-404",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120343034204e6f7420466f756e640d0a634f6e54654e742d4c654e6754683a20360d0a582d54726163653a0920666972737420090d0a582d54726163653a207365636f6e64ff0d0a0d0a00ff0d0a804172656d61696e64657200ff"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "complete",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "response": {
+            "status": "404",
+            "headers": [
+              {
+                "name": "634f6e54654e742d4c654e675468",
+                "value": "36"
+              },
+              {
+                "name": "582d5472616365",
+                "value": "6669727374"
+              },
+              {
+                "name": "582d5472616365",
+                "value": "7365636f6e64ff"
+              }
+            ],
+            "body": "00ff0d0a8041"
+          },
+          "remainder": "72656d61696e64657200ff"
+        }
+      }
+    },
+    {
+      "name": "empty-reason-and-body-complete-before-eof",
+      "input": {
+        "authority": "3139322e302e322e31",
+        "target": "2f70253246713f783d2f613f6226793d74776f2b776f726473",
+        "chunks": [
+          "",
+          "485454502f312e3120323030200d0a436f6e74656e742d4c656e6774683a20300d0a0d0a",
+          "",
+          "7461696c"
+        ],
+        "eof": false
+      },
+      "expected": {
+        "variant": "complete",
+        "fields": {
+          "request": "474554202f70253246713f783d2f613f6226793d74776f2b776f72647320485454502f312e310d0a486f73743a203139322e302e322e310d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "response": {
+            "status": "200",
+            "headers": [
+              {
+                "name": "436f6e74656e742d4c656e677468",
+                "value": "30"
+              }
+            ],
+            "body": ""
+          },
+          "remainder": "7461696c"
+        }
+      }
+    },
+    {
+      "name": "two-interim-heads-then-fixed-length",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e3120313033204561726c792048696e74730d0a4c696e6b3a203c2f613e0d0a0d",
+          "0a48545450",
+          "2f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a203030330d0a0d0a6162",
+          "637461696c"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "complete",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "response": {
+            "status": "200",
+            "headers": [
+              {
+                "name": "436f6e74656e742d4c656e677468",
+                "value": "303033"
+              }
+            ],
+            "body": "616263"
+          },
+          "remainder": "7461696c"
+        }
+      }
+    },
+    {
+      "name": "no-content-204-keeps-read-ahead",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323034204e6f20436f6e74656e740d0a582d456d7074793a09200d0a0d0a726561642d6168656164"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "complete",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "response": {
+            "status": "204",
+            "headers": [
+              {
+                "name": "582d456d707479",
+                "value": ""
+              }
+            ],
+            "body": ""
+          },
+          "remainder": "726561642d6168656164"
+        }
+      }
+    },
+    {
+      "name": "not-modified-304-keeps-length-as-metadata",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120333034204e6f74204d6f6469666965640d0a436f6e74656e742d4c656e6774683a20393232333337323033363835343737353830370d0a0d0a5a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "complete",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "response": {
+            "status": "304",
+            "headers": [
+              {
+                "name": "436f6e74656e742d4c656e677468",
+                "value": "39323233333732303336383534373735383037"
+              }
+            ],
+            "body": ""
+          },
+          "remainder": "5a"
+        }
+      }
+    },
+    {
+      "name": "incomplete-head-without-eof",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d"
+        ],
+        "eof": false
+      },
+      "expected": {
+        "variant": "needs_more",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a"
+        }
+      }
+    },
+    {
+      "name": "eof-mid-head",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d",
+          ""
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "unexpected_eof_head"
+        }
+      }
+    },
+    {
+      "name": "incomplete-body-without-eof",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a20330d0a0d0a00",
+          "ff"
+        ],
+        "eof": false
+      },
+      "expected": {
+        "variant": "needs_more",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a"
+        }
+      }
+    },
+    {
+      "name": "eof-mid-body",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a20330d0a0d0a00",
+          "ff"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "unexpected_eof_body"
+        }
+      }
+    },
+    {
+      "name": "eof-after-interim",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e3120313033204561726c792048696e74730d0a4c696e6b3a203c2f613e0d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "unexpected_eof_head"
+        }
+      }
+    },
+    {
+      "name": "bare-line-feed",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "invalid_line_ending"
+        }
+      }
+    },
+    {
+      "name": "non-lf-after-fragmented-carriage-return",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d",
+          "580d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "invalid_line_ending"
+        }
+      }
+    },
+    {
+      "name": "invalid-version",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3020323030204f4b0d0a436f6e74656e742d4c656e6774683a20300d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "invalid_status_line"
+        }
+      }
+    },
+    {
+      "name": "invalid-field-name",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a5820546573743a20610d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "invalid_field_name"
+        }
+      }
+    },
+    {
+      "name": "invalid-field-value",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a582d546573743a2061620063640d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "invalid_field_value"
+        }
+      }
+    },
+    {
+      "name": "duplicate-content-length",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a20300d0a636f6e74656e742d6c656e6774683a20300d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "duplicate_content_length"
+        }
+      }
+    },
+    {
+      "name": "list-content-length",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a20312c20310d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "invalid_decimal"
+        }
+      }
+    },
+    {
+      "name": "ambiguous-framing",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a20310d0a5472616e736665722d456e636f64696e673a206368756e6b65640d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "ambiguous_framing"
+        }
+      }
+    },
+    {
+      "name": "unsupported-transfer-encoding",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a5472616e736665722d456e636f64696e673a206368756e6b65640d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "unsupported_transfer_encoding"
+        }
+      }
+    },
+    {
+      "name": "missing-content-length",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "missing_content_length"
+        }
+      }
+    },
+    {
+      "name": "body-limit",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a2036353533370d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "body_limit"
+        }
+      }
+    },
+    {
+      "name": "decimal-overflow",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323030204f4b0d0a436f6e74656e742d4c656e6774683a20393232333337323033363835343737353830380d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "decimal_limit"
+        }
+      }
+    },
+    {
+      "name": "content-length-in-204",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e3120323034204e6f20436f6e74656e740d0a436f6e74656e742d4c656e6774683a20300d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "unexpected_content_length"
+        }
+      }
+    },
+    {
+      "name": "unsupported-protocol-switch",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e312031303120537769746368696e672050726f746f636f6c730d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "unsupported_protocol_switch"
+        }
+      }
+    },
+    {
+      "name": "too-many-interim-heads",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [
+          "485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e312031303020436f6e74696e75650d0a0d0a485454502f312e3120323030200d0a436f6e74656e742d4c656e6774683a20300d0a0d0a"
+        ],
+        "eof": true
+      },
+      "expected": {
+        "variant": "response_error",
+        "fields": {
+          "request": "474554202f6d697373696e673f783d25324620485454502f312e310d0a486f73743a203132372e302e302e313a383038300d0a436f6e6e656374696f6e3a20636c6f73650d0a0d0a",
+          "error": "interim_limit"
+        }
+      }
+    },
+    {
+      "name": "non-literal-host",
+      "input": {
+        "authority": "6578616d706c652e74657374",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [],
+        "eof": true
+      },
+      "expected": {
+        "variant": "request_error",
+        "fields": {
+          "error": "invalid_authority"
+        }
+      }
+    },
+    {
+      "name": "out-of-range-ipv4",
+      "input": {
+        "authority": "3235362e302e302e31",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [],
+        "eof": true
+      },
+      "expected": {
+        "variant": "request_error",
+        "fields": {
+          "error": "invalid_authority"
+        }
+      }
+    },
+    {
+      "name": "out-of-range-port",
+      "input": {
+        "authority": "3132372e302e302e313a3635353336",
+        "target": "2f6d697373696e673f783d253246",
+        "chunks": [],
+        "eof": true
+      },
+      "expected": {
+        "variant": "request_error",
+        "fields": {
+          "error": "invalid_authority"
+        }
+      }
+    },
+    {
+      "name": "bad-percent-escape",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f626164256730",
+        "chunks": [],
+        "eof": true
+      },
+      "expected": {
+        "variant": "request_error",
+        "fields": {
+          "error": "invalid_target"
+        }
+      }
+    },
+    {
+      "name": "fragment-in-target",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f7061746823667261676d656e74",
+        "chunks": [],
+        "eof": true
+      },
+      "expected": {
+        "variant": "request_error",
+        "fields": {
+          "error": "invalid_target"
+        }
+      }
+    },
+    {
+      "name": "space-in-target",
+      "input": {
+        "authority": "3132372e302e302e313a38303830",
+        "target": "2f68656c6c6f20776f726c64",
+        "chunks": [],
+        "eof": true
+      },
+      "expected": {
+        "variant": "request_error",
+        "fields": {
+          "error": "invalid_target"
+        }
+      }
+    }
+  ]
+}

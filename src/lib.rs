@@ -6,6 +6,7 @@
 pub mod blueprint;
 pub mod canonical;
 pub mod contracts;
+pub mod core1;
 pub mod diagnostic;
 pub mod digest;
 pub mod evidence;

@@ -10,6 +10,8 @@ The first [HTTP client experiment](docs/http-client-experiment.md) adds an opt-i
 
 The [web workbench](docs/dashboard.md) browses stored memories, edits typed blueprints, and builds/runs programs through the Rust runtime. Start it with `cargo run --locked --bin nexa-dashboard -- --seed-examples`, then open the printed local URL. It uses the visual design of the N.E.T. research page and needs no frontend package installation.
 
+The experimental [Core1 profile](docs/core1.md) runs pure Nexa source memories with bytes, richer types, control flow, and pinned imports. The [native HTTP example](examples/native-http/README.md) composes its request and response codecs over byte fixtures.
+
 ## Build and try it
 
 Rust 1.100.0, rustfmt, and Clippy are pinned in `rust-toolchain.toml`; Cargo dependencies are pinned in `Cargo.lock`. With rustup installed:
