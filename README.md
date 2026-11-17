@@ -8,6 +8,8 @@ Start with the [runnable Slice 0 demo](docs/slice0-demo.md), [validation record]
 
 The first [HTTP client experiment](docs/http-client-experiment.md) adds an opt-in GET adapter: `cargo build --locked --features http-client`. A Nexa blueprint composes fetch, format, and console memories, checks exact-origin authority before network dispatch, and can itself become a reusable memory. The default build stays local-only.
 
+The [web workbench](docs/dashboard.md) browses stored memories, edits typed blueprints, and builds/runs programs through the Rust runtime. Start it with `cargo run --locked --bin nexa-dashboard -- --seed-examples`, then open the printed local URL. It uses the visual design of the N.E.T. research page and needs no frontend package installation.
+
 ## Build and try it
 
 Rust 1.100.0, rustfmt, and Clippy are pinned in `rust-toolchain.toml`; Cargo dependencies are pinned in `Cargo.lock`. With rustup installed:

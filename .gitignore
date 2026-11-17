@@ -1,5 +1,6 @@
 /target/
 /.nexa/
 /build/
+/dashboard/node_modules/
 *.tmp
 .DS_Store

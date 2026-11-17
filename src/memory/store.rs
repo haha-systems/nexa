@@ -107,6 +107,18 @@ impl Store {
         &self.kernel
     }
 
+    /// Return the currently selected memory aliases without loading or
+    /// validating the referenced records. Callers that present memories to a
+    /// user should load each digest with `load_memory` before trusting it.
+    pub fn catalog_aliases(&self) -> Result<Vec<(String, Digest)>> {
+        Ok(self
+            .read_catalog()?
+            .aliases
+            .into_iter()
+            .map(|alias| (alias.label, alias.memory))
+            .collect())
+    }
+
     /// Exposes the deterministic object location for diagnostics and tests.
     pub fn object_path(&self, digest: &Digest) -> PathBuf {
         self.root

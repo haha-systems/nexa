@@ -1,0 +1,821 @@
+{
+  "kernel": {
+    "descriptor": {
+      "abi": "nexa.slice0.kernel/0.3",
+      "extensions": [
+        "http-client/0.1"
+      ],
+      "implementation": "sha256:a336ead766c2ff346fe5f7b245a60af885effa5788dee2eaf21ea74396139d84",
+      "language": "0.3",
+      "name": "std.slice0",
+      "operations": [
+        {
+          "contract": {
+            "capability_requirements": [
+              {
+                "capability": "console.write",
+                "resource": "stdout"
+              }
+            ],
+            "effects": [
+              "io.stdout"
+            ],
+            "export_name": "write_line",
+            "kind": "action",
+            "parameters": [
+              {
+                "name": "text",
+                "type": "String"
+              }
+            ],
+            "required_bindings": [
+              "std.console.write_line"
+            ],
+            "result_type": "Unit"
+          },
+          "name": "std.console.write_line"
+        },
+        {
+          "contract": {
+            "capability_requirements": [
+              {
+                "capability": "http.get",
+                "resource": "url.origin"
+              }
+            ],
+            "effects": [
+              "net.http"
+            ],
+            "export_name": "get",
+            "kind": "action",
+            "parameters": [
+              {
+                "name": "url",
+                "type": "String"
+              }
+            ],
+            "required_bindings": [
+              "std.http.get"
+            ],
+            "result_type": "String"
+          },
+          "name": "std.http.get"
+        },
+        {
+          "contract": {
+            "capability_requirements": [],
+            "effects": [],
+            "export_name": "trim_ascii",
+            "kind": "function",
+            "parameters": [
+              {
+                "name": "text",
+                "type": "String"
+              }
+            ],
+            "required_bindings": [],
+            "result_type": "String"
+          },
+          "name": "std.text.trim_ascii"
+        }
+      ],
+      "profile": "slice0",
+      "schema": "nexa.kernel/0.3",
+      "version": "0.3.0"
+    },
+    "digest": "sha256:4d584895d4db8c495db45ca01fe867340ec3a633e85934c897aac097ce75f9d1"
+  },
+  "memories": [
+    {
+      "digest": "sha256:f16180718a68659525b8c65ce42d2d0b078e28cafbc9fa963f4723e4ad341ae5",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [
+            {
+              "capability": "console.write",
+              "resource": "stdout"
+            }
+          ],
+          "effects": [
+            "io.stdout"
+          ],
+          "export_name": "write",
+          "kind": "action",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [
+            "std.console.write_line"
+          ],
+          "result_type": "Unit"
+        }
+      ],
+      "kind": "source",
+      "name": "local.console.line",
+      "program": null,
+      "program_evidence": [],
+      "selector": "local.console.line@1.0.0",
+      "source": [
+        {
+          "path": "src/main.nexa",
+          "text": "nexa 0.3\nmodule local.console.line\n\nexport action write(message is String) -> Unit effects {io.stdout} {\n  return std.console.write_line(message)\n}\n"
+        }
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "digest": "sha256:dcaa8c4522257100ea98a266b4fe1ad4187df821436818dcb94a5b3a0a5b4446",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [
+            {
+              "capability": "console.write",
+              "resource": "stdout"
+            }
+          ],
+          "effects": [
+            "io.stdout"
+          ],
+          "export_name": "hello",
+          "kind": "action",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [
+            "std.console.write_line"
+          ],
+          "result_type": "Unit"
+        }
+      ],
+      "kind": "program",
+      "name": "local.dashboard.hello",
+      "program": {
+        "connections": [
+          {
+            "from": {
+              "kind": "input",
+              "port": "name"
+            },
+            "to": {
+              "kind": "node",
+              "node": "clean",
+              "port": "name"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "clean",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "greeting",
+              "port": "name"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "greeting",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "write",
+              "port": "message"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "write",
+              "port": "result"
+            },
+            "to": {
+              "kind": "output",
+              "port": "result"
+            }
+          }
+        ],
+        "derived": {
+          "capability_requirements": [
+            {
+              "capability": "console.write",
+              "resource": "stdout"
+            }
+          ],
+          "dependencies": [
+            "sha256:4c805508f0e7d8b86e976175ac19833ee7194ef65e9e6968ff681ebe5f21990f",
+            "sha256:aa0f40ba12c26ad2888a7783b422f42d17fee68a01fc210b0e8a8c67fca07ef3",
+            "sha256:f16180718a68659525b8c65ce42d2d0b078e28cafbc9fa963f4723e4ad341ae5"
+          ],
+          "effects": [
+            "io.stdout"
+          ],
+          "inputs": [
+            {
+              "name": "name",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [
+            "std.console.write_line"
+          ],
+          "result_type": "Unit",
+          "unresolved_requirements": []
+        },
+        "entry": "example.hello.hello",
+        "inputs": [
+          {
+            "name": "name",
+            "type": "String"
+          }
+        ],
+        "kernel": "sha256:4d584895d4db8c495db45ca01fe867340ec3a633e85934c897aac097ce75f9d1",
+        "language": "0.3",
+        "nodes": [
+          {
+            "export": "trim",
+            "id": "clean",
+            "memory": "sha256:4c805508f0e7d8b86e976175ac19833ee7194ef65e9e6968ff681ebe5f21990f"
+          },
+          {
+            "export": "greet",
+            "id": "greeting",
+            "memory": "sha256:aa0f40ba12c26ad2888a7783b422f42d17fee68a01fc210b0e8a8c67fca07ef3"
+          },
+          {
+            "export": "write",
+            "id": "write",
+            "memory": "sha256:f16180718a68659525b8c65ce42d2d0b078e28cafbc9fa963f4723e4ad341ae5"
+          }
+        ],
+        "order_edges": [],
+        "output": {
+          "name": "result",
+          "type": "Unit"
+        },
+        "profile": "slice0",
+        "requirements": [],
+        "schema": "nexa.program/0.3",
+        "settings": []
+      },
+      "program_evidence": [
+        "sha256:1300114e337a0929ca24339dd33be6d1a395981f1a1a99777ec9297af4eebc5f"
+      ],
+      "selector": "local.dashboard.hello@1.0.0",
+      "source": [],
+      "version": "1.0.0"
+    },
+    {
+      "digest": "sha256:f5cdfb72755e6d3cf0335559f7d62c6aab079904a343d54fbe968ec448236588",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [
+            {
+              "capability": "console.write",
+              "resource": "stdout"
+            },
+            {
+              "capability": "http.get",
+              "resource": "url.origin"
+            }
+          ],
+          "effects": [
+            "io.stdout",
+            "net.http"
+          ],
+          "export_name": "fetch_page",
+          "kind": "action",
+          "parameters": [
+            {
+              "name": "url",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [
+            "std.console.write_line",
+            "std.http.get"
+          ],
+          "result_type": "Unit"
+        }
+      ],
+      "kind": "program",
+      "name": "local.dashboard.http_client",
+      "program": {
+        "connections": [
+          {
+            "from": {
+              "kind": "input",
+              "port": "url"
+            },
+            "to": {
+              "kind": "node",
+              "node": "fetch",
+              "port": "url"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "fetch",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "format",
+              "port": "body"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "format",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "write",
+              "port": "message"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "write",
+              "port": "result"
+            },
+            "to": {
+              "kind": "output",
+              "port": "result"
+            }
+          }
+        ],
+        "derived": {
+          "capability_requirements": [
+            {
+              "capability": "console.write",
+              "resource": "stdout"
+            },
+            {
+              "capability": "http.get",
+              "resource": "url.origin"
+            }
+          ],
+          "dependencies": [
+            "sha256:841c1789f58aa078f55fbabb0dcb623b0b4be4a62a7279c42be51b7641be96f5",
+            "sha256:be2075ba675e65327aacc6d7e66968e4e64893367d408c3c8876d6cfcf88ca9e",
+            "sha256:f16180718a68659525b8c65ce42d2d0b078e28cafbc9fa963f4723e4ad341ae5"
+          ],
+          "effects": [
+            "io.stdout",
+            "net.http"
+          ],
+          "inputs": [
+            {
+              "name": "url",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [
+            "std.console.write_line",
+            "std.http.get"
+          ],
+          "result_type": "Unit",
+          "unresolved_requirements": []
+        },
+        "entry": "example.http_client.fetch_page",
+        "inputs": [
+          {
+            "name": "url",
+            "type": "String"
+          }
+        ],
+        "kernel": "sha256:4d584895d4db8c495db45ca01fe867340ec3a633e85934c897aac097ce75f9d1",
+        "language": "0.3",
+        "nodes": [
+          {
+            "export": "fetch",
+            "id": "fetch",
+            "memory": "sha256:841c1789f58aa078f55fbabb0dcb623b0b4be4a62a7279c42be51b7641be96f5"
+          },
+          {
+            "export": "format",
+            "id": "format",
+            "memory": "sha256:be2075ba675e65327aacc6d7e66968e4e64893367d408c3c8876d6cfcf88ca9e"
+          },
+          {
+            "export": "write",
+            "id": "write",
+            "memory": "sha256:f16180718a68659525b8c65ce42d2d0b078e28cafbc9fa963f4723e4ad341ae5"
+          }
+        ],
+        "order_edges": [],
+        "output": {
+          "name": "result",
+          "type": "Unit"
+        },
+        "profile": "slice0",
+        "requirements": [],
+        "schema": "nexa.program/0.3",
+        "settings": []
+      },
+      "program_evidence": [
+        "sha256:1de95442d395b86e8b94383f2898206908042041ae3bce3b4b3868153829c965"
+      ],
+      "selector": "local.dashboard.http_client@1.0.0",
+      "source": [],
+      "version": "1.0.0"
+    },
+    {
+      "digest": "sha256:aa0f40ba12c26ad2888a7783b422f42d17fee68a01fc210b0e8a8c67fca07ef3",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [],
+          "effects": [],
+          "export_name": "greet",
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [],
+          "result_type": "String"
+        }
+      ],
+      "kind": "source",
+      "name": "local.hello.greet",
+      "program": null,
+      "program_evidence": [],
+      "selector": "local.hello.greet@1.0.0",
+      "source": [
+        {
+          "path": "src/main.nexa",
+          "text": "nexa 0.3\nmodule local.hello.greet\n\nexport fn greet(name is String) -> String {\n  return \"Hello, \" + name + \"!\"\n}\n"
+        }
+      ],
+      "version": "1.0.0"
+    },
+    {
+      "digest": "sha256:841c1789f58aa078f55fbabb0dcb623b0b4be4a62a7279c42be51b7641be96f5",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [
+            {
+              "capability": "http.get",
+              "resource": "url.origin"
+            }
+          ],
+          "effects": [
+            "net.http"
+          ],
+          "export_name": "fetch",
+          "kind": "action",
+          "parameters": [
+            {
+              "name": "url",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [
+            "std.http.get"
+          ],
+          "result_type": "String"
+        }
+      ],
+      "kind": "source",
+      "name": "local.http.fetch",
+      "program": null,
+      "program_evidence": [],
+      "selector": "local.http.fetch@0.1.0",
+      "source": [
+        {
+          "path": "src/main.nexa",
+          "text": "nexa 0.3\nmodule local.http.fetch\n\nexport action fetch(url is String) -> String effects {net.http} {\n  return std.http.get(url)\n}\n"
+        }
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "digest": "sha256:be2075ba675e65327aacc6d7e66968e4e64893367d408c3c8876d6cfcf88ca9e",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [],
+          "effects": [],
+          "export_name": "format",
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "body",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [],
+          "result_type": "String"
+        }
+      ],
+      "kind": "source",
+      "name": "local.http.format",
+      "program": null,
+      "program_evidence": [],
+      "selector": "local.http.format@0.1.0",
+      "source": [
+        {
+          "path": "src/main.nexa",
+          "text": "nexa 0.3\nmodule local.http.format\n\nexport fn format(body is String) -> String {\n  return \"Response: \" + body\n}\n"
+        }
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "digest": "sha256:4c805508f0e7d8b86e976175ac19833ee7194ef65e9e6968ff681ebe5f21990f",
+      "evidence": [],
+      "exports": [
+        {
+          "capability_requirements": [],
+          "effects": [],
+          "export_name": "trim",
+          "kind": "function",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "String"
+            }
+          ],
+          "required_bindings": [],
+          "result_type": "String"
+        }
+      ],
+      "kind": "source",
+      "name": "local.text.trim",
+      "program": null,
+      "program_evidence": [],
+      "selector": "local.text.trim@1.0.0",
+      "source": [
+        {
+          "path": "src/main.nexa",
+          "text": "nexa 0.3\nmodule local.text.trim\n\nexport fn trim(name is String) -> String {\n  return std.text.trim_ascii(name)\n}\n"
+        }
+      ],
+      "version": "1.0.0"
+    }
+  ],
+  "memories_limited": false,
+  "network_enabled": true,
+  "programs": [
+    {
+      "description": "Trim a name, compose a greeting, and write it to stdout.",
+      "draft": {
+        "connections": [
+          {
+            "from": {
+              "kind": "input",
+              "port": "name"
+            },
+            "to": {
+              "kind": "node",
+              "node": "clean",
+              "port": "name"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "clean",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "greeting",
+              "port": "name"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "greeting",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "write",
+              "port": "message"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "write",
+              "port": "result"
+            },
+            "to": {
+              "kind": "output",
+              "port": "result"
+            }
+          }
+        ],
+        "entry": "example.hello.hello",
+        "inputs": [
+          {
+            "name": "name",
+            "type": "String"
+          }
+        ],
+        "language": "0.3",
+        "nodes": [
+          {
+            "export": "trim",
+            "id": "clean",
+            "selector": "local.text.trim@1.0.0"
+          },
+          {
+            "export": "greet",
+            "id": "greeting",
+            "selector": "local.hello.greet@1.0.0"
+          },
+          {
+            "export": "write",
+            "id": "write",
+            "selector": "local.console.line@1.0.0"
+          }
+        ],
+        "order_edges": [],
+        "output": {
+          "name": "result",
+          "type": "Unit"
+        },
+        "profile": "slice0",
+        "requirements": [],
+        "schema": "nexa.blueprint-draft/0.3",
+        "settings": []
+      },
+      "id": "hello",
+      "input_ports": [
+        {
+          "name": "name",
+          "type": "String"
+        }
+      ],
+      "inputs": {
+        "name": "  Ada  "
+      },
+      "manifest": {
+        "policies": [
+          {
+            "decision": "allow",
+            "operation": "std.console.write_line",
+            "resource": "stdout"
+          }
+        ],
+        "principal": "app:hello",
+        "requests": [
+          {
+            "capability": "console.write",
+            "resource": "stdout"
+          }
+        ],
+        "schema": "nexa.application/0.3"
+      },
+      "title": "Hello"
+    },
+    {
+      "description": "Fetch an explicitly granted HTTP origin, format the body, and write it to stdout.",
+      "draft": {
+        "connections": [
+          {
+            "from": {
+              "kind": "input",
+              "port": "url"
+            },
+            "to": {
+              "kind": "node",
+              "node": "fetch",
+              "port": "url"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "fetch",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "format",
+              "port": "body"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "format",
+              "port": "result"
+            },
+            "to": {
+              "kind": "node",
+              "node": "write",
+              "port": "message"
+            }
+          },
+          {
+            "from": {
+              "kind": "node",
+              "node": "write",
+              "port": "result"
+            },
+            "to": {
+              "kind": "output",
+              "port": "result"
+            }
+          }
+        ],
+        "entry": "example.http_client.fetch_page",
+        "inputs": [
+          {
+            "name": "url",
+            "type": "String"
+          }
+        ],
+        "language": "0.3",
+        "nodes": [
+          {
+            "export": "fetch",
+            "id": "fetch",
+            "selector": "local.http.fetch@0.1.0"
+          },
+          {
+            "export": "format",
+            "id": "format",
+            "selector": "local.http.format@0.1.0"
+          },
+          {
+            "export": "write",
+            "id": "write",
+            "selector": "local.console.line@1.0.0"
+          }
+        ],
+        "order_edges": [],
+        "output": {
+          "name": "result",
+          "type": "Unit"
+        },
+        "profile": "slice0",
+        "requirements": [],
+        "schema": "nexa.blueprint-draft/0.3",
+        "settings": []
+      },
+      "id": "http-client",
+      "input_ports": [
+        {
+          "name": "url",
+          "type": "String"
+        }
+      ],
+      "inputs": {
+        "url": "http://127.0.0.1:8765/message.txt"
+      },
+      "manifest": {
+        "policies": [
+          {
+            "decision": "allow",
+            "operation": "std.http.get",
+            "resource": "http://127.0.0.1:8765"
+          },
+          {
+            "decision": "allow",
+            "operation": "std.console.write_line",
+            "resource": "stdout"
+          }
+        ],
+        "principal": "app:http-client",
+        "requests": [
+          {
+            "capability": "console.write",
+            "resource": "stdout"
+          },
+          {
+            "capability": "http.get",
+            "resource": "http://127.0.0.1:8765"
+          }
+        ],
+        "schema": "nexa.application/0.3"
+      },
+      "title": "HTTP fetch"
+    }
+  ]
+}

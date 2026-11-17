@@ -195,6 +195,8 @@ At this point, claim `slice0` support only. Passing these fixtures does not esta
 
 The first follow-on [HTTP client experiment](http-client-experiment.md) is implemented: an opt-in GET adapter, exact-origin authorization, and a three-memory client that can be saved and reused. Its [validation record](validation/http-client.md) covers local HTTP integration. A richer HTTP API and server still need the general-purpose foundations below.
 
+The [web workbench](dashboard.md) adds the first browser interface over those existing contracts: memory browsing, a typed node editor, build inspection, authorized playground execution, and session receipts. Its local Rust API uses the same compiler/runtime as the CLI. Hosted snapshot previews support browsing and graph editing; execution requires the local runtime.
+
 The full design extends beyond the first seven milestones. These directions are planned at a higher level; each needs its own bounded implementation plan before work begins.
 
 | Direction | Demonstration to aim for |
@@ -204,7 +206,7 @@ The full design extends beyond the first seven milestones. These directions are 
 | Structured tasks and resources | A bounded concurrent service with cancellation, state snapshots, and tested cleanup. |
 | HTTP components | Extend the GET client with typed request/response values, then assemble a minimal server from pinned memories and exercise it with integration tests. |
 | Typed inference | Add one bounded AI feature with explicit context, validated output, budgets, and tool authority. |
-| Web inspector | Browse and expand components, edit their connections through the shared model, check the revision, then explicitly run it. |
+| Web inspector | Extend the initial workbench with nested graph expansion, durable workspace history, and richer editing over the shared model. |
 | Performance | Benchmark a specific assembly against a recorded workload, environment, and latency/error limits. |
 
 Throughput targets such as one million requests per second require evidence for the actual assembly and environment. Component reuse helps construct candidates; it does not automatically establish the target.

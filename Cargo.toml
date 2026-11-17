@@ -1,5 +1,6 @@
 [package]
 name = "nexa"
+default-run = "nexa"
 version = "0.3.0"
 edition = "2024"
 rust-version = "1.100"
