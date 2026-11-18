@@ -222,7 +222,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .inspector-kv strong, .inspector-kv code { min-width: 0; color: #353d43; font: inherit; overflow-wrap: anywhere; }
 .inspector-port-list { display: grid; gap: 5px; margin-top: 6px; }
 .inspector-port { display: flex; justify-content: space-between; gap: 10px; padding: 6px 7px; background: #dfe2e8; color: #303944; font: 8px var(--mono); }
-.inspector-port code { color: #3152bc; font: inherit; }
+.inspector-port code { min-width: 0; color: #3152bc; font: inherit; overflow-wrap: anywhere; text-align: right; }
 .inspector-import-link { display: block; width: 100%; padding: 5px 0; border: 0; border-top: 1px solid #d1d3ce; background: transparent; color: #3152bc; font: 8px/1.45 var(--mono); overflow-wrap: anywhere; text-align: left; cursor: pointer; }
 .inspector-import-link:hover { color: var(--blue); text-decoration: underline; }
 .compile-inspector { padding: 12px 0 0; }
@@ -301,6 +301,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .receipt-json { margin-top: 12px; border-top: 1px solid #c8cbc6; color: #586166; }
 .receipt-json summary { padding: 9px 0; cursor: pointer; color: #5d6567; font: 8px var(--mono); }
 .receipt-json pre { max-height: 290px; min-height: 30px; border: 1px solid #d1d3ce; background: #e8e7e1; color: #343b42; }
+.receipt-readable-detail { border-bottom: 1px solid #d0d2cc; color: #5d6567; }
+.receipt-readable-detail summary { padding: 7px 0; cursor: pointer; font: 8px var(--mono); }
+.receipt-readable-detail pre { max-height: 170px; overflow: auto; margin: 0 0 8px; padding: 9px; border: 1px solid #d1d3ce; background: #e8e7e1; color: #343b42; font: 8px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .runs-layout { display: grid; grid-template-columns: minmax(250px, .75fr) minmax(0, 1.25fr); min-height: 360px; border-top: 1px solid #adb3af; border-bottom: 1px solid #adb3af; }
 .run-history-list { border-right: 1px solid #c6c9c4; }

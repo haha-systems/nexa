@@ -331,6 +331,7 @@ function setActiveProgram(programId, { resetRunOutput = true } = {}) {
   renderInputContract(program.input_ports ?? state.draft?.inputs ?? []);
   putText('input-json-status', state.draft?.inputs?.length ? `${state.draft.inputs.length} DECLARED INPUT${state.draft.inputs.length === 1 ? '' : 'S'}` : 'NO INPUTS DECLARED');
   putText('manifest-json-status', state.defaultManifestText ? 'PROGRAM MANIFEST' : 'NO MANIFEST PROVIDED');
+  byId('seal-result').textContent = '';
   updateProfileUi();
   clearVisibleBuildState();
   renderGrantOptions();
@@ -400,7 +401,8 @@ function updateActionAvailability() {
   byId('run-program').disabled = !runtime || !activeProgram() || state.busy !== null;
   byId('seal-program').disabled = !runtime || !currentBuild || state.busy !== null;
   if (isCore1Draft()) byId('seal-program').disabled = true;
-  byId('add-memory-button').disabled = !state.draft || allMemories().length === 0;
+  byId('add-memory-button').disabled = !state.draft
+    || !allMemories().some((memory) => memoryProfile(memory) === programProfile());
   if (isPreview()) {
     for (const id of ['build-program', 'playground-build', 'run-program', 'seal-program']) {
       const button = byId(id);
