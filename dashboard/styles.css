@@ -404,3 +404,22 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+.proof-status:empty { display: none; }
+.proof-graph { padding: 20px; min-width: 0; background: var(--blue); color: #fff; }
+.proof-graph h2, #core1-memory h2 { margin: 0 0 14px; font-size: 14px; overflow-wrap: anywhere; }
+.proof-layers { display: grid; gap: 12px; }
+.proof-layer { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.proof-node { background: #0b1c61; color: #fff; text-align: left; padding: 10px 14px; min-width: 134px; border: 1px solid #829bff; }
+.proof-node[aria-pressed="true"] { background: #e9edff; color: #102064; }
+.proof-node:focus-visible { outline-color: #fff; }
+.proof-node strong, .proof-node small { display: block; }
+.proof-node small { margin-top: 5px; font: 9px var(--mono); }
+.proof-digest { font: 10px/1.45 var(--mono); overflow-wrap: anywhere; }
+.proof-imports { padding-left: 16px; }
+#core1-memory details { margin-top: 10px; }
+#core1-memory summary { cursor: pointer; }
+.proof-output { margin: 10px 0 0; padding: 12px; background: #121517; color: #def0f5; max-height: 32rem; overflow: auto; font: 11px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.proof-output:empty { display: none; }
+.proof-run { margin-top: 20px; }
+.proof-result-summary { padding: 0 14px; }

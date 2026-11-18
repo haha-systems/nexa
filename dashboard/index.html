@@ -36,6 +36,9 @@
           <button class="nav-item" type="button" data-view="runs" aria-current="false">
             <span class="nav-index">05</span><span>Runs</span><span class="nav-arrow" aria-hidden="true">↗</span>
           </button>
+          <button class="nav-item" type="button" data-view="core1" aria-current="false">
+            <span class="nav-index"></span><span>Core1 HTTP proof</span><span class="nav-arrow" aria-hidden="true">↗</span>
+          </button>
         </nav>
 
         <section class="rail-card" aria-labelledby="rail-kernel-title">
@@ -187,6 +190,45 @@
                 <div class="receipt-meta" id="receipt-meta"><p class="receipt-empty">The runtime returns a structured receipt for every invocation, including denied and failed outcomes.</p></div>
                 <details class="receipt-json"><summary>View full receipt JSON</summary><pre id="receipt-json-output">No receipt in this session.</pre></details>
               </section>
+            </div>
+          </section>
+
+          <section class="view" id="view-core1" data-view-panel="core1" hidden>
+            <div class="page-heading compact-heading">
+              <div><h1>Core1 <em>HTTP proof.</em></h1></div>
+              <p class="heading-copy">Inspect the sealed imports, then run the Nexa codecs on supplied response bytes.</p>
+            </div>
+            <p id="core1-status" role="status" class="proof-status"></p>
+            <div id="core1-proof" hidden>
+              <div class="blueprint-layout">
+                <section class="proof-graph" aria-labelledby="core1-graph-title">
+                  <h2 id="core1-graph-title">Sealed memory imports</h2>
+                  <div class="proof-layers" id="core1-graph"></div>
+                </section>
+                <aside class="inspector-panel" aria-label="Selected Core1 memory">
+                  <div id="core1-memory" class="inspector-body"></div>
+                </aside>
+              </div>
+              <div class="playground-grid proof-run">
+                <section class="editor-card">
+                  <div class="editor-card-head"><h2><label for="core1-input">Fixture input</label></h2></div>
+                  <p class="editor-hint">The sample contains a fragmented HTTP 404 response. Bytes are written in hex.</p>
+                  <textarea id="core1-input" class="code-editor" spellcheck="false"></textarea>
+                  <div class="play-actions">
+                    <button type="button" class="button button-quiet" id="core1-reset">Reset input</button>
+                    <button type="button" class="button button-primary" id="core1-run">Run proof</button>
+                  </div>
+                </section>
+                <section class="receipt-panel">
+                  <div class="receipt-head"><h2>Result</h2></div>
+                  <p class="proof-result-summary" id="core1-result-summary" role="status">Run the proof to see the decoded response.</p>
+                  <details id="core1-request-panel" hidden open>
+                    <summary>Encoded request</summary>
+                    <pre class="proof-output" id="core1-request"></pre>
+                  </details>
+                  <pre class="proof-output" id="core1-output"></pre>
+                </section>
+              </div>
             </div>
           </section>
 

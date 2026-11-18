@@ -12,7 +12,21 @@ cargo run --locked --bin nexa-dashboard -- --seed-examples
 
 Open the listening URL printed in the terminal, normally `http://127.0.0.1:8787`. The server serves the interface and API together. The frontend uses plain JavaScript modules and needs no Node package installation or frontend build.
 
-The default store is `.nexa/dashboard-store`. `--seed-examples` explicitly seals the checked-in example source memories into that store; it does not run their actions. To inspect another store, supply its path:
+## Run the Core1 HTTP proof
+
+Start the local dashboard with a dedicated example store:
+
+```sh
+cargo run --locked --bin nexa-dashboard -- --seed-examples --store .nexa/core1-dashboard-store
+```
+
+Open the printed URL with `/#core1` appended, normally `http://127.0.0.1:8787/#core1`. Select any of the five sealed memories to see its source, pinned imports, and checked signature. Click **Run proof** to encode the request and decode the sample's fragmented HTTP 404 response. The result includes the wire request, the six-byte binary body, and the read-ahead bytes. You can edit the fixture JSON and run it again.
+
+The Core1 proof runs offline on fixture bytes. The local dashboard seals it at startup with `--seed-examples`. The hosted snapshot preview has no Core1 runner.
+
+## Store and HTTP adapter options
+
+The default store is `.nexa/dashboard-store`. `--seed-examples` seals the checked-in example source memories at startup. To inspect another store, supply its path:
 
 ```sh
 cargo run --locked --bin nexa-dashboard -- --store .nexa/store --port 8788
@@ -52,6 +66,8 @@ The first server is intended for a single-user local workbench. It binds to loop
 |---|---|
 | `GET /api/health` | Runtime availability. |
 | `GET /api/workspace` | Current kernel, bounded memory catalogue, source/contract metadata, and example drafts. |
+| `GET /api/core1/proof` | The seeded Core1 HTTP proof's digest, checked memories, sources, and sample input. |
+| `POST /api/core1/run` | Evaluate the seeded Core1 proof with a JSON `input` object. |
 | `POST /api/build` | Resolve/check a draft; return ProgramSpec, subject identity, and inspection. |
 | `POST /api/run` | Run a checked program with explicit input, manifest, and grants; return stdout, receipt, and outcome exit code. |
 | `POST /api/seal` | Save a checked ProgramSpec as a named/versioned reusable memory. |

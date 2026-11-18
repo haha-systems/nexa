@@ -282,6 +282,42 @@ fn json_body(response: &Response) -> Value {
 }
 
 #[test]
+fn dashboard_runs_the_sealed_core1_http_proof() {
+    let dashboard = Dashboard::start();
+    let response = dashboard.get("/api/core1/proof");
+    assert_eq!(response.status, 200);
+    let proof = json_body(&response);
+    let subject = proof["subject"].as_str().unwrap();
+    let memories = proof["memories"].as_object().unwrap();
+    assert_eq!(memories.len(), 5);
+    assert_eq!(memories[subject]["profile"], "core1");
+    assert!(
+        proof["sources"][subject]
+            .as_str()
+            .unwrap()
+            .contains("import response")
+    );
+    for memory in memories.values() {
+        for target in memory["imports"].as_object().unwrap().values() {
+            assert!(memories.contains_key(target.as_str().unwrap()));
+        }
+    }
+
+    let fixture =
+        nexa::canonical::parse(include_bytes!("../examples/native-http/input.json")).unwrap();
+    assert_eq!(proof["input"], fixture);
+    let (response, payload) = dashboard.json("/api/core1/run", &json!({ "input": fixture }));
+    assert_eq!(response.status, 200);
+    assert_eq!(payload["subject"], subject);
+    assert_eq!(payload["value"]["variant"], "complete");
+    assert_eq!(payload["value"]["fields"]["response"]["status"], "404");
+    assert_eq!(
+        payload["value"]["fields"]["response"]["body"],
+        "00ff0d0a8041"
+    );
+}
+
+#[test]
 fn dashboard_seeds_builds_runs_seals_and_serves_static_assets() {
     let dashboard = Dashboard::start();
 
@@ -416,6 +452,7 @@ fn dashboard_seeds_builds_runs_seals_and_serves_static_assets() {
         ("/graph.css", "text/css"),
         ("/app.js", "text/javascript"),
         ("/graph.js", "text/javascript"),
+        ("/core1-proof.js", "text/javascript"),
     ] {
         let asset = dashboard.get(path);
         assert_eq!(asset.status, 200, "static asset {path} is served");

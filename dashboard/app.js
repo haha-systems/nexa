@@ -1,4 +1,14 @@
 import { GraphEditor } from './graph.js';
+import { openCore1Proof } from './core1-proof.js';
+
+const views = {
+  overview: 'Overview',
+  memories: 'Memories',
+  blueprints: 'Blueprints',
+  playground: 'Playground',
+  runs: 'Runs',
+  core1: 'Core1 HTTP proof',
+};
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -427,18 +437,19 @@ function onGraphChange(draftFromEditor) {
 }
 
 function switchView(name, { updateHash = true } = {}) {
-  if (!['overview', 'memories', 'blueprints', 'playground', 'runs'].includes(name)) return;
+  if (!Object.hasOwn(views, name)) return;
   for (const panel of $$('[data-view-panel]')) panel.hidden = panel.dataset.viewPanel !== name;
   for (const button of $$('.nav-item[data-view]')) {
     const active = button.dataset.view === name;
     button.classList.toggle('is-active', active);
     button.setAttribute('aria-current', active ? 'page' : 'false');
   }
-  putText('breadcrumb-current', ({ overview: 'Overview', memories: 'Memories', blueprints: 'Blueprints', playground: 'Playground', runs: 'Runs' })[name]);
+  putText('breadcrumb-current', views[name]);
   if (updateHash && history.replaceState) history.replaceState(null, '', `#${name}`);
   if (name === 'memories') renderMemoryCatalog();
   if (name === 'overview') renderOverview();
   if (name === 'runs') renderRunHistory();
+  if (name === 'core1') openCore1Proof(apiPost, readJsonResponse);
 }
 
 function bindNavigation() {
@@ -1462,7 +1473,7 @@ async function bootstrap() {
   bindEvents();
   loadGraphEditor();
   const initialView = location.hash.slice(1);
-  switchView(['overview', 'memories', 'blueprints', 'playground', 'runs'].includes(initialView) ? initialView : 'blueprints', { updateHash: false });
+  switchView(Object.hasOwn(views, initialView) ? initialView : 'blueprints', { updateHash: false });
   await refreshWorkspace();
   if (state.workspace) {
     state.selectedMemoryDigest = allMemories()[0]?.digest ?? allMemories()[0]?.selector ?? null;

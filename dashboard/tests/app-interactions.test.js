@@ -221,3 +221,40 @@ test('opening the saved Hello memory creates a resolved, example-seeded blueprin
   assert.ok(grant);
   assert.equal(grant.checked, false, 'opening the saved program does not grant requested resources');
 });
+
+test('Core1 proof shows the pinned memories and sends the selected input to the runner', async (t) => {
+  const fixture = readJson('examples/native-http/fixtures.json').cases[0];
+  const source = readText('examples/native-http/exchange.nexa');
+  const proof = {
+    subject: 'proof',
+    input: fixture.input,
+    memories: {
+      proof: { module: 'example.native_http.exchange', imports: { request: 'encoder' }, signature: { name: 'exchange' } },
+      encoder: { module: 'example.native_http.request', imports: {}, signature: { name: 'encode' } },
+    },
+    sources: { proof: source, encoder: readText('examples/native-http/request.nexa') },
+  };
+  const calls = [];
+  await startApp(t, async (path, init) => {
+    if (path === '/api/workspace') return jsonResponse(workspaceFixture);
+    if (path === '/api/core1/proof') return jsonResponse(proof);
+    if (path === '/api/core1/run') {
+      calls.push(JSON.parse(init.body));
+      return jsonResponse({ subject: proof.subject, value: fixture.expected });
+    }
+    throw new Error(`Unexpected dashboard request: ${path}`);
+  });
+
+  document.querySelector('[data-view="core1"]').click();
+  await waitFor(() => !document.querySelector('#core1-proof').hidden);
+  assert.equal(location.hash, '#core1');
+  assert.equal(document.querySelectorAll('.proof-node').length, 2);
+  document.querySelectorAll('.proof-node')[1].click();
+  assert.match(document.querySelector('#core1-memory').textContent, /example\.native_http\.request/);
+  assert.equal(document.querySelector('#core1-run').disabled, false);
+  document.querySelector('#core1-run').click();
+  await waitFor(() => document.querySelector('#core1-result-summary').textContent === 'HTTP 404 · 6 body bytes');
+  assert.deepEqual(calls, [{ input: fixture.input }]);
+  assert.match(document.querySelector('#core1-request').textContent, /^GET \/missing/);
+  assert.deepEqual(JSON.parse(document.querySelector('#core1-output').textContent), fixture.expected);
+});

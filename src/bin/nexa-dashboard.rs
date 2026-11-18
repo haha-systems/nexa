@@ -9,6 +9,7 @@ use nexa::{
         self, ApplicationManifest, BlueprintDraft, CallableContract, Implementation, ProgramSpec,
         WireDocument,
     },
+    core1,
     diagnostic::{Error, Result},
     digest::Digest,
     kernel::KernelDescriptor,
@@ -54,7 +55,7 @@ struct Args {
     #[arg(long, default_value = ".nexa/dashboard-store")]
     store: PathBuf,
 
-    /// Seal the checked-in hello memories and, with http-client enabled, HTTP memories.
+    /// Seal the greeting and Core1 proof, plus the HTTP adapter example when enabled.
     #[arg(long)]
     seed_examples: bool,
 }
@@ -64,6 +65,7 @@ struct Service {
     store: Store,
     port: u16,
     static_root: PathBuf,
+    core1_proof: Option<Digest>,
 }
 
 #[derive(Debug)]
@@ -111,6 +113,12 @@ struct SealRequest {
     program: ProgramSpec,
     name: String,
     version: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Core1RunRequest {
+    input: Json,
 }
 
 #[derive(Serialize)]
@@ -179,9 +187,12 @@ fn main() {
 
 fn start(args: Args) -> std::result::Result<(), String> {
     let store = Store::open(&args.store).map_err(|error| error.to_string())?;
-    if args.seed_examples {
+    let core1_proof = if args.seed_examples {
         seed_examples(&store).map_err(|error| error.to_string())?;
-    }
+        Some(seed_core1_proof(&store).map_err(|error| error.to_string())?)
+    } else {
+        None
+    };
 
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, args.port))
         .map_err(|error| format!("bind 127.0.0.1:{}: {error}", args.port))?;
@@ -193,6 +204,7 @@ fn start(args: Args) -> std::result::Result<(), String> {
         store,
         port,
         static_root: Path::new(env!("CARGO_MANIFEST_DIR")).join("dashboard"),
+        core1_proof,
     });
     let active = Arc::new(AtomicUsize::new(0));
 
@@ -477,6 +489,14 @@ fn dispatch(request: Request, service: &Service) -> HttpResponse {
         ("GET", "/api/workspace") => match workspace(service) {
             Ok(value) => bounded_json_response(200, &value),
             Err(error) => workspace_error_response(error),
+        },
+        ("GET", "/api/core1/proof") => match core1_proof(service) {
+            Ok(value) => bounded_json_response(200, &value),
+            Err(error) => workspace_error_response(error),
+        },
+        ("POST", "/api/core1/run") => match run_core1_proof(&request.body, service) {
+            Ok(value) => bounded_json_response(200, &value),
+            Err(error) => diagnostic_response(error),
         },
         ("POST", "/api/build") => match build(&request.body, service) {
             Ok(value) => bounded_json_response(200, &value),
@@ -798,6 +818,77 @@ fn seed_examples(store: &Store) -> Result<()> {
     Ok(())
 }
 
+fn seed_core1_proof(store: &Store) -> Result<Digest> {
+    let seal = |name, source, imports: &[(&str, &Digest)]| {
+        let imports = imports
+            .iter()
+            .map(|(alias, digest)| (alias.to_string(), (*digest).clone()))
+            .collect();
+        core1::seal(store, name, source, imports)
+    };
+    let decimal = seal(
+        "decimal.nexa",
+        include_str!("../../examples/native-http/decimal.nexa"),
+        &[],
+    )?;
+    let headers = seal(
+        "headers.nexa",
+        include_str!("../../examples/native-http/headers.nexa"),
+        &[("decimal", &decimal)],
+    )?;
+    let request = seal(
+        "request.nexa",
+        include_str!("../../examples/native-http/request.nexa"),
+        &[("decimal", &decimal)],
+    )?;
+    let response = seal(
+        "response.nexa",
+        include_str!("../../examples/native-http/response.nexa"),
+        &[("headers", &headers)],
+    )?;
+    seal(
+        "exchange.nexa",
+        include_str!("../../examples/native-http/exchange.nexa"),
+        &[("request", &request), ("response", &response)],
+    )
+}
+
+fn core1_subject(service: &Service) -> Result<&Digest> {
+    service.core1_proof.as_ref().ok_or_else(|| {
+        Error::new(
+            "E_NOT_FOUND",
+            "Start the local dashboard with --seed-examples to load the Core1 proof.",
+        )
+    })
+}
+
+fn core1_proof(service: &Service) -> Result<Json> {
+    let subject = core1_subject(service)?;
+    let memories = core1::inspect_closure(&service.store, subject)?;
+    let sources = memories
+        .iter()
+        .map(|(digest, memory)| {
+            let bytes = core1::read_bounded(
+                &service.store.object_path(&memory.source),
+                core1::SOURCE_LIMIT,
+            )?;
+            memory.source.verify(&bytes)?;
+            let text = String::from_utf8(bytes)
+                .map_err(|error| Error::new("E_UTF8", error.to_string()))?;
+            Ok((digest.clone(), text))
+        })
+        .collect::<Result<BTreeMap<_, _>>>()?;
+    let input = canonical::parse(include_bytes!("../../examples/native-http/input.json"))?;
+    Ok(json!({"subject": subject, "memories": memories, "sources": sources, "input": input}))
+}
+
+fn run_core1_proof(body: &[u8], service: &Service) -> Result<Json> {
+    let request: Core1RunRequest = decode_request(body)?;
+    let subject = core1_subject(service)?;
+    let value = core1::run(&service.store, subject, &request.input, core1::DEFAULT_FUEL)?;
+    Ok(json!({"subject": subject, "value": value}))
+}
+
 fn static_file(path: &str, root: &Path) -> Option<(Vec<u8>, &'static str)> {
     let (name, content_type) = match path {
         "/" | "/index.html" | "/dashboard/" | "/dashboard/index.html" => {
@@ -807,6 +898,9 @@ fn static_file(path: &str, root: &Path) -> Option<(Vec<u8>, &'static str)> {
         "/graph.css" | "/dashboard/graph.css" => ("graph.css", "text/css; charset=utf-8"),
         "/app.js" | "/dashboard/app.js" => ("app.js", "text/javascript; charset=utf-8"),
         "/graph.js" | "/dashboard/graph.js" => ("graph.js", "text/javascript; charset=utf-8"),
+        "/core1-proof.js" | "/dashboard/core1-proof.js" => {
+            ("core1-proof.js", "text/javascript; charset=utf-8")
+        }
         _ => return None,
     };
     let path = root.join(name);
@@ -820,6 +914,7 @@ fn diagnostic_response(error: Error) -> HttpResponse {
 
 fn workspace_error_response(error: Error) -> HttpResponse {
     let status = match error.diagnostic.code.as_str() {
+        "E_NOT_FOUND" => 404,
         "E_KERNEL" => 409,
         "E_LIMIT" => 413,
         _ => 500,

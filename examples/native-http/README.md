@@ -16,7 +16,11 @@ The decoder supports fixed-length HTTP/1.1 responses, including 4xx and 5xx stat
 
 The response decoder expects `State.start()` on the first call and the `needs_more.next` value it returned on the previous call thereafter. The head state retains CRLF scan progress across chunks. The body state retains the parsed fields, collected bytes, and remaining byte count. Each state holds bounded buffers. Appending to them copies the current prefix and consumes the Core1 execution budget. A call can signal EOF independently of its chunk. The fixture harness signals EOF after feeding the supplied chunks and includes any subsequent fixture bytes in the returned remainder.
 
-## Run the example
+## Run in the dashboard
+
+The local dashboard can seal and run this example. Open its **Core1 HTTP proof** view to inspect each memory and run the sample. [Dashboard commands](../../docs/dashboard.md#run-the-core1-http-proof)
+
+## Run from the CLI
 
 From the repository root in Bash, build Nexa and seal the example with its exact imports.
 
