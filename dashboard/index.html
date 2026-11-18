@@ -36,9 +36,6 @@
           <button class="nav-item" type="button" data-view="runs" aria-current="false">
             <span class="nav-index">05</span><span>Runs</span><span class="nav-arrow" aria-hidden="true">↗</span>
           </button>
-          <button class="nav-item" type="button" data-view="core1" aria-current="false">
-            <span class="nav-index"></span><span>Core1 HTTP proof</span><span class="nav-arrow" aria-hidden="true">↗</span>
-          </button>
         </nav>
 
         <section class="rail-card" aria-labelledby="rail-kernel-title">
@@ -148,7 +145,7 @@
                 </div>
               </aside>
             </div>
-            <section class="seal-panel" aria-labelledby="seal-heading">
+            <section class="seal-panel" id="seal-panel" aria-labelledby="seal-heading">
               <div><p class="eyebrow">PRESERVE A COMPOSITION</p><h2 id="seal-heading">Seal as a memory</h2><p>Save a built program as an immutable memory with a named version.</p></div>
               <div class="seal-form"><label><span>NAME</span><input id="seal-name" type="text" placeholder="local.my_program" autocomplete="off" /></label><label><span>VERSION</span><input id="seal-version" type="text" placeholder="1.0.0" autocomplete="off" /></label><button class="button button-dark" id="seal-program" type="button" disabled>Seal memory</button></div>
               <p class="seal-result" id="seal-result" aria-live="polite"></p>
@@ -159,7 +156,7 @@
             <div class="page-kicker"><span>WORKSPACE / PLAYGROUND</span><span id="playground-state-label">READY WHEN BUILT</span></div>
             <div class="page-heading compact-heading">
               <div><p class="eyebrow">INPUT, AUTHORITY, INVOCATION</p><h1>Run with <em>intent.</em></h1></div>
-              <p class="heading-copy">Inspect the manifest, grant only the resources you choose, then invoke the built program.</p>
+              <p class="heading-copy" id="playground-copy">Inspect the manifest, grant only the resources you choose, then invoke the built program.</p>
             </div>
             <div class="playground-toolbar"><label class="program-select-wrap"><span class="eyebrow">PROGRAM</span><select id="playground-program-select" aria-label="Select a program to run"></select></label><div class="build-marker" id="playground-build-marker"><span class="status-lamp"></span><span>Build a draft to continue</span></div><button class="button button-quiet" type="button" data-open-view="blueprints">Open blueprint <span aria-hidden="true">↗</span></button></div>
             <div class="playground-grid">
@@ -170,65 +167,28 @@
                   <label class="sr-only" for="input-json">Program input JSON</label><textarea id="input-json" class="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="input-contract-hint" placeholder="Build a program to see its input contract."></textarea>
                   <div class="editor-footer"><span id="input-json-status">NO PROGRAM INPUT LOADED</span><button type="button" class="text-link" id="reset-input">Reset input</button></div>
                 </section>
-                <section class="editor-card manifest-card" aria-labelledby="manifest-editor-title">
+                <section class="editor-card manifest-card" id="manifest-card" aria-labelledby="manifest-editor-title">
                   <div class="editor-card-head"><div><p class="eyebrow">02 / MANIFEST</p><h2 id="manifest-editor-title">Application manifest</h2></div><span class="editor-type">JSON</span></div>
                   <p class="editor-hint">The manifest describes requested capabilities and operation policy. Grants below are launch-time choices.</p>
                   <label class="sr-only" for="manifest-json">Application manifest JSON</label><textarea id="manifest-json" class="code-editor manifest-editor" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="Select a program to load its manifest."></textarea>
                   <div class="editor-footer"><span id="manifest-json-status">NO MANIFEST LOADED</span><button type="button" class="text-link" id="reset-manifest">Reset manifest</button></div>
                 </section>
-                <section class="grant-card" aria-labelledby="grant-heading">
+                <section class="grant-card" id="grant-card" aria-labelledby="grant-heading">
                   <div class="editor-card-head"><div><p class="eyebrow">03 / LAUNCH-TIME AUTHORITY</p><h2 id="grant-heading">Resource grants</h2></div><span class="grant-explicit">EXPLICIT</span></div>
                   <p class="editor-hint">No resource is granted until you select it here. Grants apply to this run only.</p>
                   <div class="grant-list" id="grant-list"><p class="grant-empty">Build a program and load its manifest to review requested resources.</p></div>
+                </section>
+                <section class="play-run-card" aria-label="Build and run controls">
                   <div class="play-actions"><button class="button button-quiet" id="playground-build" type="button">Build current draft</button><button class="button button-primary" id="run-program" type="button" disabled>Run program <span aria-hidden="true">↗</span></button></div>
                   <p class="action-error" id="playground-error" role="alert" hidden></p>
                 </section>
               </div>
               <section class="receipt-panel" aria-labelledby="receipt-heading">
                 <div class="receipt-head"><div><p class="eyebrow">EXECUTION RECEIPT</p><h2 id="receipt-heading">Output</h2></div><span class="receipt-state" id="receipt-state">NO INVOCATION</span></div>
-                <div class="stdout-window"><div class="stdout-label"><span>STDOUT</span><span id="stdout-code">—</span></div><pre id="stdout-output">Run a built program to see its output and receipt.</pre></div>
+                <div class="stdout-window"><div class="stdout-label"><span id="stdout-label">STDOUT</span><span id="stdout-code">—</span></div><pre id="stdout-output">Run a built program to see its output and receipt.</pre></div>
                 <div class="receipt-meta" id="receipt-meta"><p class="receipt-empty">The runtime returns a structured receipt for every invocation, including denied and failed outcomes.</p></div>
                 <details class="receipt-json"><summary>View full receipt JSON</summary><pre id="receipt-json-output">No receipt in this session.</pre></details>
               </section>
-            </div>
-          </section>
-
-          <section class="view" id="view-core1" data-view-panel="core1" hidden>
-            <div class="page-heading compact-heading">
-              <div><h1>Core1 <em>HTTP proof.</em></h1></div>
-              <p class="heading-copy">Inspect the sealed imports, then run the Nexa codecs on supplied response bytes.</p>
-            </div>
-            <p id="core1-status" role="status" class="proof-status"></p>
-            <div id="core1-proof" hidden>
-              <div class="blueprint-layout">
-                <section class="proof-graph" aria-labelledby="core1-graph-title">
-                  <h2 id="core1-graph-title">Sealed memory imports</h2>
-                  <div class="proof-layers" id="core1-graph"></div>
-                </section>
-                <aside class="inspector-panel" aria-label="Selected Core1 memory">
-                  <div id="core1-memory" class="inspector-body"></div>
-                </aside>
-              </div>
-              <div class="playground-grid proof-run">
-                <section class="editor-card">
-                  <div class="editor-card-head"><h2><label for="core1-input">Fixture input</label></h2></div>
-                  <p class="editor-hint">The sample contains a fragmented HTTP 404 response. Bytes are written in hex.</p>
-                  <textarea id="core1-input" class="code-editor" spellcheck="false"></textarea>
-                  <div class="play-actions">
-                    <button type="button" class="button button-quiet" id="core1-reset">Reset input</button>
-                    <button type="button" class="button button-primary" id="core1-run">Run proof</button>
-                  </div>
-                </section>
-                <section class="receipt-panel">
-                  <div class="receipt-head"><h2>Result</h2></div>
-                  <p class="proof-result-summary" id="core1-result-summary" role="status">Run the proof to see the decoded response.</p>
-                  <details id="core1-request-panel" hidden open>
-                    <summary>Encoded request</summary>
-                    <pre class="proof-output" id="core1-request"></pre>
-                  </details>
-                  <pre class="proof-output" id="core1-output"></pre>
-                </section>
-              </div>
             </div>
           </section>
 

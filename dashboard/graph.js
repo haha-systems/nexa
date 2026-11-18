@@ -38,6 +38,27 @@ function portTypeName(type) {
   return type || 'Unknown';
 }
 
+function portTypeClass(type) {
+  const value = String(type || '').toLowerCase();
+  if (value === 'string') return 'type-string';
+  if (value === 'unit') return 'type-unit';
+  return value ? 'type-other' : 'type-unknown';
+}
+
+function displayPortType(type) {
+  const value = String(portTypeName(type));
+  const digestMarker = value.lastIndexOf('sha256:');
+  if (digestMarker >= 0) {
+    const digestStart = digestMarker + 'sha256:'.length;
+    const digest = value.slice(digestStart).replace(/[)>\]}\s]+$/, '');
+    if (digest.length > 20) {
+      const shortDigest = `${digest.slice(0, 8)}…${digest.slice(-6)}`;
+      return `${value.slice(0, digestStart)}${shortDigest}${value.slice(digestStart + digest.length)}`;
+    }
+  }
+  return value.length > 32 ? `${value.slice(0, 16)}…${value.slice(-10)}` : value;
+}
+
 /**
  * Interactive editor for the semantic BlueprintDraft graph. Canvas placement,
  * selection, zoom, and pan are kept in this instance and never enter the draft.
@@ -491,12 +512,13 @@ export class GraphEditor {
   }
 
   makePortButton(port, direction, contractState) {
-    const button = makeElement('button', `nx-port nx-port-${direction} ${port.type ? `type-${String(port.type).toLowerCase()}` : ''} ${contractState === 'unknown' ? 'is-unknown' : ''}`);
+    const button = makeElement('button', `nx-port nx-port-${direction} ${port.type ? portTypeClass(port.type) : ''} ${contractState === 'unknown' ? 'is-unknown' : ''}`);
     button.type = 'button';
     button.dataset.portDirection = direction;
     button.dataset.portName = port.name;
     const label = makeElement('span', 'nx-port-label', port.name);
-    const type = makeElement('span', `nx-port-type ${port.type ? `type-${String(port.type).toLowerCase()}` : 'type-unknown'}`, portTypeName(port.type));
+    const type = makeElement('span', `nx-port-type ${port.type ? portTypeClass(port.type) : 'type-unknown'}`, displayPortType(port.type));
+    type.title = String(portTypeName(port.type));
     const dot = makeElement('span', 'nx-port-dot');
     dot.setAttribute('aria-hidden', 'true');
     if (direction === 'source') button.append(label, type, dot);

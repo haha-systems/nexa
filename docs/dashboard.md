@@ -20,9 +20,9 @@ Start the local dashboard with a dedicated example store:
 cargo run --locked --bin nexa-dashboard -- --seed-examples --store .nexa/core1-dashboard-store
 ```
 
-Open the printed URL with `/#core1` appended, normally `http://127.0.0.1:8787/#core1`. Select any of the five sealed memories to see its source, pinned imports, and checked signature. Click **Run proof** to encode the request and decode the sample's fragmented HTTP 404 response. The result includes the wire request, the six-byte binary body, and the read-ahead bytes. You can edit the fixture JSON and run it again.
+Open the printed URL, normally `http://127.0.0.1:8787`. In **Blueprints**, select **Core1 HTTP proof** from the program menu. The request encoder and response decoder feed a third node that assembles the result. You can inspect or rewire these nodes using the regular editor. Click **Build program**, then open **Playground** and click **Run program**. The sample result contains the encoded GET request, HTTP status 404, the six-byte binary body, and the read-ahead bytes. Edit the fixture JSON in Playground to try another response.
 
-The Core1 proof runs offline on fixture bytes. The local dashboard seals it at startup with `--seed-examples`. The hosted snapshot preview has no Core1 runner.
+The Core1 proof runs offline on fixture bytes. The local dashboard seeds its source memories at startup with `--seed-examples`. Core1 builds and runs use the Core1 profile and require no manifest permissions. Sealing a Core1 blueprint as a reusable program memory is a later feature. The hosted snapshot preview uses exported examples.
 
 ## Store and HTTP adapter options
 
@@ -66,8 +66,6 @@ The first server is intended for a single-user local workbench. It binds to loop
 |---|---|
 | `GET /api/health` | Runtime availability. |
 | `GET /api/workspace` | Current kernel, bounded memory catalogue, source/contract metadata, and example drafts. |
-| `GET /api/core1/proof` | The seeded Core1 HTTP proof's digest, checked memories, sources, and sample input. |
-| `POST /api/core1/run` | Evaluate the seeded Core1 proof with a JSON `input` object. |
 | `POST /api/build` | Resolve/check a draft; return ProgramSpec, subject identity, and inspection. |
 | `POST /api/run` | Run a checked program with explicit input, manifest, and grants; return stdout, receipt, and outcome exit code. |
 | `POST /api/seal` | Save a checked ProgramSpec as a named/versioned reusable memory. |

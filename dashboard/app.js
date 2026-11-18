@@ -1,5 +1,4 @@
 import { GraphEditor } from './graph.js';
-import { openCore1Proof } from './core1-proof.js';
 
 const views = {
   overview: 'Overview',
@@ -7,7 +6,6 @@ const views = {
   blueprints: 'Blueprints',
   playground: 'Playground',
   runs: 'Runs',
-  core1: 'Core1 HTTP proof',
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -144,6 +142,11 @@ function validWorkspace(workspace) {
 
 function allMemories() { return state.workspace?.memories || []; }
 function allPrograms() { return state.workspace?.programs || []; }
+function programProfile(program = activeProgram()) {
+  return String(program?.draft?.profile ?? program?.profile ?? 'slice0').toLowerCase();
+}
+function memoryProfile(memory) { return String(memory?.profile ?? 'slice0').toLowerCase(); }
+function isCore1Draft(draft = state.draft) { return String(draft?.profile ?? '').toLowerCase() === 'core1'; }
 function activeProgram() {
   if (state.customProgram && String(state.customProgram.id) === String(state.programId)) return state.customProgram;
   return allPrograms().find((program) => String(program.id) === String(state.programId)) || null;
@@ -191,7 +194,16 @@ function setMode(mode, workspace = state.workspace) {
 }
 
 function currentDraftKey(programId = state.programId) {
-  return `nexa.dashboard.draft.v1:${String(programId ?? 'unselected')}`;
+  const id = String(programId ?? 'unselected');
+  const sourceProgram = state.customProgram && String(state.customProgram.id) === id
+    ? state.customProgram
+    : allPrograms().find((program) => String(program.id) === id);
+  const draft = sourceProgram?.draft ?? (id === String(state.programId) ? state.draft : null);
+  if (isCore1Draft(draft)) {
+    const kernel = state.workspace?.kernel?.digest ?? 'unversioned-kernel';
+    return `nexa.dashboard.draft.v1:${id}:kernel:${kernel}`;
+  }
+  return `nexa.dashboard.draft.v1:${id}`;
 }
 
 function storedDraftFor(program) {
@@ -269,17 +281,18 @@ function updateProgramSelectors() {
   }
   const memorySelect = byId('add-memory-select');
   if (memorySelect) {
+    const compatibleMemories = allMemories().filter((memory) => memoryProfile(memory) === programProfile());
     memorySelect.replaceChildren();
-    const placeholder = node('option', '', allMemories().length ? 'Choose a stored memory' : 'No stored memories');
+    const placeholder = node('option', '', compatibleMemories.length ? 'Choose a stored memory' : 'No stored memories for this profile');
     placeholder.value = '';
     memorySelect.append(placeholder);
-    for (const memory of allMemories()) {
+    for (const memory of compatibleMemories) {
       const option = node('option', '', `${asText(memory.name, memory.selector)} · ${asText(memory.version, '')}`.trim());
       option.value = asText(memory.digest ?? memory.selector, '');
       memorySelect.append(option);
     }
     memorySelect.value = '';
-    memorySelect.disabled = allMemories().length === 0 || !state.draft;
+    memorySelect.disabled = compatibleMemories.length === 0 || !state.draft;
   }
   putText('overview-program-count', programs.length);
 }
@@ -318,6 +331,7 @@ function setActiveProgram(programId, { resetRunOutput = true } = {}) {
   renderInputContract(program.input_ports ?? state.draft?.inputs ?? []);
   putText('input-json-status', state.draft?.inputs?.length ? `${state.draft.inputs.length} DECLARED INPUT${state.draft.inputs.length === 1 ? '' : 'S'}` : 'NO INPUTS DECLARED');
   putText('manifest-json-status', state.defaultManifestText ? 'PROGRAM MANIFEST' : 'NO MANIFEST PROVIDED');
+  updateProfileUi();
   clearVisibleBuildState();
   renderGrantOptions();
   renderSelection(null);
@@ -342,9 +356,22 @@ function inputForDraft(draft, sampleInput = null) {
   return JSON.stringify(input, null, 2);
 }
 
+function updateProfileUi() {
+  const core1 = isCore1Draft();
+  byId('manifest-card').hidden = core1;
+  byId('grant-card').hidden = core1;
+  byId('seal-panel').hidden = core1;
+  putText('playground-copy', core1
+    ? 'Edit the typed Core1 input values, then invoke the built program. This pure profile requests no host authority.'
+    : 'Inspect the manifest, grant only the resources you choose, then invoke the built program.');
+  putText('receipt-heading', core1 ? 'Core1 result' : 'Output');
+  putText('stdout-label', core1 ? 'CORE1 RETURN VALUE' : 'STDOUT');
+}
+
 function renderInputContract(ports = state.draft?.inputs || []) {
   const values = ports.map((port) => `${asText(port.name)} : ${asText(port.type)}`);
-  putText('input-contract-hint', values.length ? `Contract · ${values.join('  /  ')}` : 'This program declares no input ports.');
+  const suffix = isCore1Draft() ? ' Core1 Bytes values use hexadecimal strings.' : '';
+  putText('input-contract-hint', values.length ? `Contract · ${values.join('  /  ')}.${suffix}` : `This program declares no input ports.${suffix}`);
 }
 
 function clearVisibleBuildState() {
@@ -372,6 +399,7 @@ function updateActionAvailability() {
   byId('playground-build').disabled = !runtime || !hasDraft || state.busy !== null;
   byId('run-program').disabled = !runtime || !activeProgram() || state.busy !== null;
   byId('seal-program').disabled = !runtime || !currentBuild || state.busy !== null;
+  if (isCore1Draft()) byId('seal-program').disabled = true;
   byId('add-memory-button').disabled = !state.draft || allMemories().length === 0;
   if (isPreview()) {
     for (const id of ['build-program', 'playground-build', 'run-program', 'seal-program']) {
@@ -449,7 +477,6 @@ function switchView(name, { updateHash = true } = {}) {
   if (name === 'memories') renderMemoryCatalog();
   if (name === 'overview') renderOverview();
   if (name === 'runs') renderRunHistory();
-  if (name === 'core1') openCore1Proof(apiPost, readJsonResponse);
 }
 
 function bindNavigation() {
@@ -546,8 +573,9 @@ function renderMemoryCatalog() {
   const filtered = memories.filter((memory) => {
     const kind = memoryKind(memory);
     if (kindFilter !== 'all' && kind !== kindFilter) return false;
+    const imports = Object.entries(memory.imports || {}).flatMap(([alias, target]) => [alias, target]);
     const haystack = [memory.name, memory.selector, memory.version, memory.digest, memory.description,
-      ...exportsOf(memory).map((contract) => exportName(contract))].join(' ').toLowerCase();
+      ...exportsOf(memory).map((contract) => exportName(contract)), ...imports].join(' ').toLowerCase();
     return !query || haystack.includes(query);
   });
   putText('memory-result-count', `${filtered.length} OF ${memories.length} STORED CONTRACT${memories.length === 1 ? '' : 'S'}`);
@@ -600,6 +628,15 @@ function addDetailSection(parent, title, count = null) {
   return section;
 }
 
+function openMemoryBySelector(selector) {
+  const memory = allMemories().find((entry) => entry.digest === selector || entry.selector === selector);
+  if (!memory) return;
+  state.selectedMemoryDigest = memory.digest ?? memory.selector;
+  byId('memory-search').value = '';
+  switchView('memories');
+  renderMemoryCatalog();
+}
+
 function renderMemoryDetail(memory) {
   const root = byId('memory-detail');
   root.replaceChildren();
@@ -611,6 +648,7 @@ function renderMemoryDetail(memory) {
   header.append(titleBlock);
   const badges = node('div');
   badges.append(node('span', 'kind-tag', memoryKind(memory)));
+  if (memory.profile) badges.append(node('span', 'profile-tag', memory.profile));
   if (memory.version) badges.append(node('span', 'version-tag', memory.version));
   header.append(badges);
   root.append(header);
@@ -653,6 +691,24 @@ function renderMemoryDetail(memory) {
       }
       implementationSection.append(list);
     } else implementationSection.append(node('p', 'empty-message', 'No evidence references are attached to this program implementation.'));
+  }
+
+  const imports = Object.entries(memory.imports || {});
+  if (imports.length) {
+    const importSection = addDetailSection(root, 'PINNED IMPORTS', imports.length);
+    for (const [alias, targetValue] of imports) {
+      const target = typeof targetValue === 'string'
+        ? targetValue
+        : targetValue?.digest ?? targetValue?.selector ?? JSON.stringify(targetValue);
+      const row = node('div', 'memory-import-row');
+      row.append(node('span', 'memory-import-alias', alias));
+      const link = node('button', 'memory-import-link', allMemories().find((entry) => entry.digest === target || entry.selector === target)?.name ?? target);
+      link.type = 'button';
+      link.title = target;
+      link.addEventListener('click', () => openMemoryBySelector(target));
+      row.append(link);
+      importSection.append(row);
+    }
   }
 
   const sources = Array.isArray(memory.source) ? memory.source : [];
@@ -742,6 +798,7 @@ function openStoredProgram(memory) {
   renderInputContract(draft.inputs);
   putText('input-json-status', `${draft.inputs.length} DECLARED INPUT${draft.inputs.length === 1 ? '' : 'S'}`);
   putText('manifest-json-status', state.defaultManifestText ? 'PROGRAM MANIFEST' : 'NO MANIFEST PROVIDED');
+  updateProfileUi();
   clearVisibleBuildState();
   renderGrantOptions();
   renderSelection(null);
@@ -801,6 +858,22 @@ function renderSelection(selection) {
     root.append(node('p', 'inspector-subtitle', asText(memory?.selector ?? draftNode.selector ?? draftNode.memory)));
     addInspectorKv(root, 'EXPORT', asText(draftNode.export ?? selection.export));
     if (memory?.digest) addInspectorKv(root, 'DIGEST', memory.digest, true);
+    const imports = Object.entries(memory?.imports || {});
+    if (imports.length) {
+      const section = node('section', 'compile-section');
+      section.append(node('h3', '', 'PINNED IMPORTS'));
+      for (const [alias, targetValue] of imports) {
+        const target = typeof targetValue === 'string'
+          ? targetValue
+          : targetValue?.digest ?? targetValue?.selector ?? JSON.stringify(targetValue);
+        const link = node('button', 'inspector-import-link', `${alias}  →  ${target}`);
+        link.type = 'button';
+        link.title = target;
+        link.addEventListener('click', () => openMemoryBySelector(target));
+        section.append(link);
+      }
+      root.append(section);
+    }
     if (contract) {
       addInspectorKv(root, 'KIND', asText(contract.kind));
       renderPortList(root, 'INPUT CONTRACT', contractParameters(contract));
@@ -958,6 +1031,7 @@ function manifestRequests(manifest) {
 }
 
 function currentManifest() {
+  if (isCore1Draft()) return copyJson(state.activeManifest ?? emptyApplicationManifest());
   const text = byId('manifest-json').value.trim();
   if (!text) throw new Error('Add an application manifest before running this program.');
   let manifest;
@@ -980,6 +1054,16 @@ function currentInput() {
     if (!Object.hasOwn(input, port.name)) throw new Error(`Input “${port.name}” is required by the program contract.`);
     if (port.type === 'String' && typeof input[port.name] !== 'string') throw new Error(`Input “${port.name}” must be a string.`);
     if (port.type === 'Unit' && input[port.name] !== null) throw new Error(`Input “${port.name}” must be null for Unit.`);
+    if (isCore1Draft() && port.type === 'Bytes' && (typeof input[port.name] !== 'string' || !/^(?:[0-9a-f]{2})*$/i.test(input[port.name]))) {
+      throw new Error(`Input “${port.name}” must be an even-length hexadecimal byte string.`);
+    }
+    if (isCore1Draft() && port.type === 'Bool' && typeof input[port.name] !== 'boolean') {
+      throw new Error(`Input “${port.name}” must be a boolean.`);
+    }
+    if (isCore1Draft() && port.type === 'List[Bytes]' && (!Array.isArray(input[port.name])
+      || !input[port.name].every((item) => typeof item === 'string' && /^(?:[0-9a-f]{2})*$/i.test(item)))) {
+      throw new Error(`Input “${port.name}” must be an array of hexadecimal byte strings.`);
+    }
   }
   return input;
 }
@@ -1033,6 +1117,7 @@ function clearReceiptOutput() {
   putText('stdout-code', '—');
   byId('receipt-meta').replaceChildren(node('p', 'receipt-empty', 'The runtime returns a structured receipt for every invocation, including denied and failed outcomes.'));
   putText('receipt-json-output', 'No receipt in this session.');
+  updateProfileUi();
 }
 
 function stdoutText(value) {
@@ -1047,17 +1132,64 @@ function outcomeKind(receipt) {
   return receipt?.outcome?.kind ?? receipt?.outcome?.status ?? 'Outcome not reported';
 }
 
+function core1Summary(value) {
+  const variant = String(value?.variant ?? '').toLowerCase();
+  const fields = value?.fields ?? {};
+  if (variant === 'complete') {
+    const response = fields.response ?? {};
+    const body = response.body;
+    const bodyBytes = typeof body === 'string' && /^[0-9a-f]*$/i.test(body) ? body.length / 2 : null;
+    return `HTTP ${asText(response.status, 'response complete')}${bodyBytes == null ? '' : ` · ${bodyBytes} body bytes`}`;
+  }
+  if (variant === 'request_error') return `Request error · ${asText(fields.error, 'invalid request')}`;
+  if (variant === 'response_error') return `Response error · ${asText(fields.error, 'invalid response')}`;
+  if (variant === 'needs_more') return 'Response needs more bytes.';
+  return variant ? variant.replaceAll('_', ' ') : 'Core1 returned a value.';
+}
+
+function decodeHexText(value) {
+  if (typeof value !== 'string' || value.length % 2 || !/^[0-9a-f]*$/i.test(value)) return null;
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+  }
+  try { return new TextDecoder().decode(bytes); } catch { return null; }
+}
+
+function addReceiptFact(parent, label, value, code = false) {
+  const row = node('div', 'receipt-fact');
+  row.append(node('span', '', label), node(code ? 'code' : 'strong', '', value));
+  parent.append(row);
+}
+
+function addCore1ReadableDetails(parent, value) {
+  const fields = value?.fields;
+  if (!fields || typeof fields !== 'object') return;
+  for (const [label, bytes] of [['ENCODED GET REQUEST', fields.request], ['RESPONSE BODY', fields.response?.body]]) {
+    const decoded = decodeHexText(bytes);
+    if (decoded == null) continue;
+    const details = node('details', 'receipt-readable-detail');
+    details.append(node('summary', '', label));
+    details.append(node('pre', '', decoded));
+    parent.append(details);
+  }
+}
+
 function renderReceipt(result, record = null) {
   const receipt = result?.receipt;
   if (!receipt) return;
+  const core1 = receipt.profile === 'core1' || record?.profile === 'core1' || isCore1Draft();
   const outcome = outcomeKind(receipt);
   const successful = outcome === 'Succeeded' && Number(result.exit_code) === 0;
+  const core1Value = receipt.outcome?.value;
+  updateProfileUi();
   putText('receipt-state', outcome.toUpperCase());
   $('#receipt-state').className = `receipt-state ${successful ? 'is-success' : 'is-failure'}`;
-  putText('stdout-output', stdoutText(result.stdout));
+  putText('stdout-output', stdoutText(core1 ? core1Value : result.stdout));
   putText('stdout-code', `EXIT ${asText(result.exit_code, '—')}`);
   const meta = byId('receipt-meta');
   meta.replaceChildren();
+  if (core1 && core1Value !== undefined) addReceiptFact(meta, 'RESULT', core1Summary(core1Value));
   for (const [label, value, code] of [
     ['INVOCATION', receipt.invocation_id, true],
     ['PROGRAM', receipt.program ?? record?.subject, true],
@@ -1067,16 +1199,13 @@ function renderReceipt(result, record = null) {
     ['EFFECTS', Array.isArray(receipt.effects) ? String(receipt.effects.length) : null, false],
   ]) {
     if (value == null) continue;
-    const row = node('div', 'receipt-fact');
-    row.append(node('span', '', label), node(code ? 'code' : 'strong', '', value));
-    meta.append(row);
+    addReceiptFact(meta, label, value, code);
   }
   const details = receipt.outcome?.message ?? receipt.outcome?.reason;
   if (details) {
-    const row = node('div', 'receipt-fact');
-    row.append(node('span', '', 'DETAIL'), node('strong', '', details));
-    meta.append(row);
+    addReceiptFact(meta, 'DETAIL', details);
   }
+  if (core1) addCore1ReadableDetails(meta, core1Value);
   putText('receipt-json-output', JSON.stringify(receipt, null, 2));
 }
 
@@ -1251,7 +1380,7 @@ function renderRunDetail(record) {
 }
 
 async function sealBuiltProgram() {
-  if (!canMutateRuntime() || !isBuiltForCurrentDraft() || state.busy) return;
+  if (!canMutateRuntime() || !isBuiltForCurrentDraft() || isCore1Draft() || state.busy) return;
   const name = byId('seal-name').value.trim();
   const version = byId('seal-version').value.trim();
   const result = byId('seal-result');
@@ -1419,9 +1548,10 @@ async function importDraft(event) {
   if (!file) return;
   try {
     const draft = JSON.parse(await file.text());
-    if (!draft || typeof draft !== 'object' || draft.schema !== 'nexa.blueprint-draft/0.3'
+    const supportedSchemas = new Set(['nexa.blueprint-draft/0.3', 'nexa.core1-blueprint-draft/0.1']);
+    if (!draft || typeof draft !== 'object' || !supportedSchemas.has(draft.schema)
       || !Array.isArray(draft.nodes) || !Array.isArray(draft.connections)) {
-      throw new Error('Choose a Nexa blueprint draft document (nexa.blueprint-draft/0.3).');
+      throw new Error('Choose a Nexa blueprint draft document (Slice0 0.3 or Core1 0.1).');
     }
     const example = programForEntry(draft.entry);
     const filenameTitle = file.name.replace(/\.json$/i, '').replace(/[._-]+/g, ' ').trim();
@@ -1449,6 +1579,7 @@ async function importDraft(event) {
     renderInputContract(draft.inputs);
     putText('input-json-status', draft.inputs?.length ? `${draft.inputs.length} DECLARED INPUT${draft.inputs.length === 1 ? '' : 'S'}` : 'NO INPUTS DECLARED');
     putText('manifest-json-status', 'PROGRAM MANIFEST');
+    updateProfileUi();
     if (state.graph) {
       state.suppressGraphChange = true;
       state.graph.setGraph(copyJson(draft), allMemories());
@@ -1473,8 +1604,13 @@ async function bootstrap() {
   bindEvents();
   loadGraphEditor();
   const initialView = location.hash.slice(1);
-  switchView(Object.hasOwn(views, initialView) ? initialView : 'blueprints', { updateHash: false });
+  const legacyCore1DeepLink = initialView === 'core1';
+  switchView(Object.hasOwn(views, initialView) ? initialView : 'blueprints', { updateHash: legacyCore1DeepLink });
   await refreshWorkspace();
+  if (legacyCore1DeepLink && allPrograms().some((program) => String(program.id) === 'core1-http')) {
+    setActiveProgram('core1-http');
+    switchView('blueprints');
+  }
   if (state.workspace) {
     state.selectedMemoryDigest = allMemories()[0]?.digest ?? allMemories()[0]?.selector ?? null;
     updateProgramSelectors();

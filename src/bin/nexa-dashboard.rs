@@ -6,8 +6,7 @@ use clap::Parser;
 use nexa::{
     blueprint, canonical,
     contracts::{
-        self, ApplicationManifest, BlueprintDraft, CallableContract, Implementation, ProgramSpec,
-        WireDocument,
+        self, ApplicationManifest, BlueprintDraft, Implementation, ProgramSpec, WireDocument,
     },
     core1,
     diagnostic::{Error, Result},
@@ -65,7 +64,7 @@ struct Service {
     store: Store,
     port: u16,
     static_root: PathBuf,
-    core1_proof: Option<Digest>,
+    core1_memories: Option<BTreeMap<String, Digest>>,
 }
 
 #[derive(Debug)]
@@ -100,8 +99,23 @@ struct BuildRequest {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct Core1BuildRequest {
+    draft: core1::blueprint::Draft,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RunRequest {
     program: ProgramSpec,
+    input: Json,
+    manifest: ApplicationManifest,
+    allow: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Core1RunRequest {
+    program: core1::blueprint::Program,
     input: Json,
     manifest: ApplicationManifest,
     allow: Vec<String>,
@@ -113,12 +127,6 @@ struct SealRequest {
     program: ProgramSpec,
     name: String,
     version: String,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Core1RunRequest {
-    input: Json,
 }
 
 #[derive(Serialize)]
@@ -143,7 +151,11 @@ struct MemoryView {
     name: String,
     version: String,
     kind: &'static str,
-    exports: Vec<CallableContract>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    imports: Option<BTreeMap<String, Digest>>,
+    exports: Vec<Json>,
     source: Vec<SourceView>,
     program: Option<ProgramSpec>,
     evidence: Vec<Digest>,
@@ -161,11 +173,11 @@ struct ProgramExample {
     id: &'static str,
     title: &'static str,
     description: &'static str,
-    draft: BlueprintDraft,
+    draft: Json,
     /// Concrete input values from the checked-in example input JSON.
     inputs: Json,
     /// Typed input ports from the actual compose draft.
-    input_ports: Vec<nexa::contracts::Port>,
+    input_ports: Vec<Json>,
     manifest: ApplicationManifest,
 }
 
@@ -187,9 +199,9 @@ fn main() {
 
 fn start(args: Args) -> std::result::Result<(), String> {
     let store = Store::open(&args.store).map_err(|error| error.to_string())?;
-    let core1_proof = if args.seed_examples {
+    let core1_memories = if args.seed_examples {
         seed_examples(&store).map_err(|error| error.to_string())?;
-        Some(seed_core1_proof(&store).map_err(|error| error.to_string())?)
+        Some(seed_core1_memories(&store).map_err(|error| error.to_string())?)
     } else {
         None
     };
@@ -204,7 +216,7 @@ fn start(args: Args) -> std::result::Result<(), String> {
         store,
         port,
         static_root: Path::new(env!("CARGO_MANIFEST_DIR")).join("dashboard"),
-        core1_proof,
+        core1_memories,
     });
     let active = Arc::new(AtomicUsize::new(0));
 
@@ -490,14 +502,6 @@ fn dispatch(request: Request, service: &Service) -> HttpResponse {
             Ok(value) => bounded_json_response(200, &value),
             Err(error) => workspace_error_response(error),
         },
-        ("GET", "/api/core1/proof") => match core1_proof(service) {
-            Ok(value) => bounded_json_response(200, &value),
-            Err(error) => workspace_error_response(error),
-        },
-        ("POST", "/api/core1/run") => match run_core1_proof(&request.body, service) {
-            Ok(value) => bounded_json_response(200, &value),
-            Err(error) => diagnostic_response(error),
-        },
         ("POST", "/api/build") => match build(&request.body, service) {
             Ok(value) => bounded_json_response(200, &value),
             Err(error) => diagnostic_response(error),
@@ -567,10 +571,12 @@ fn workspace(service: &Service) -> Result<Json> {
     };
 
     let aliases = service.store.catalog_aliases()?;
-    let memories_limited = aliases.len() > MAX_MEMORIES;
-    let mut memories = Vec::with_capacity(aliases.len().min(MAX_MEMORIES));
+    let core1_memory_count = service.core1_memories.as_ref().map_or(0, BTreeMap::len);
+    let catalog_limit = MAX_MEMORIES.saturating_sub(core1_memory_count);
+    let memories_limited = aliases.len() > catalog_limit;
+    let mut memories = Vec::with_capacity(aliases.len().min(catalog_limit) + core1_memory_count);
     let mut source_bytes_total = 0usize;
-    for (selector, digest) in aliases.into_iter().take(MAX_MEMORIES) {
+    for (selector, digest) in aliases.into_iter().take(catalog_limit) {
         let record = service.store.load_memory(&digest)?;
         let (kind, program, program_evidence) = match &record.implementation {
             Implementation::Source { .. } => ("source", None, Vec::new()),
@@ -605,48 +611,69 @@ fn workspace(service: &Service) -> Result<Json> {
                 .map_err(|error| Error::new("E_UTF8", error.to_string()).at(path.clone()))?;
             source.push(SourceView { path, text });
         }
+        let exports = record
+            .exports
+            .into_iter()
+            .map(|export| {
+                serde_json::to_value(export)
+                    .map_err(|error| Error::new("E_CONTRACT", error.to_string()))
+            })
+            .collect::<Result<Vec<_>>>()?;
         memories.push(MemoryView {
             digest: digest.clone(),
             selector,
             name: record.metadata.name,
             version: record.metadata.version,
             kind,
-            exports: record.exports,
+            profile: None,
+            imports: None,
+            exports,
             source,
             program,
             evidence: service.store.evidence_for(&digest)?,
             program_evidence,
         });
     }
+    memories.extend(core1_memory_views(service, &mut source_bytes_total)?);
 
+    let hello_draft: BlueprintDraft = read_example_document("examples/hello/hello.compose.json")?;
     let hello = ProgramExample {
         id: "hello",
         title: "Hello",
         description: "Trim a name, compose a greeting, and write it to stdout.",
-        draft: read_example_document("examples/hello/hello.compose.json")?,
+        draft: serde_json::to_value(&hello_draft)
+            .map_err(|error| Error::new("E_CONTRACT", error.to_string()))?,
         inputs: read_example_json("examples/hello/input.json")?,
-        input_ports: read_example_document::<BlueprintDraft>("examples/hello/hello.compose.json")?
-            .inputs,
+        input_ports: ports_as_json(&hello_draft.inputs)?,
         manifest: read_example_document("examples/hello/hello.app.json")?,
     };
     #[cfg(feature = "http-client")]
-    let programs = vec![
+    let mut programs = vec![
         hello,
         ProgramExample {
             id: "http-client",
             title: "HTTP fetch",
             description: "Fetch an explicitly granted HTTP origin, format the body, and write it to stdout.",
-            draft: read_example_document("examples/http-client/client.compose.json")?,
-            inputs: read_example_json("examples/http-client/input.json")?,
-            input_ports: read_example_document::<BlueprintDraft>(
+            draft: serde_json::to_value(read_example_document::<BlueprintDraft>(
                 "examples/http-client/client.compose.json",
-            )?
-            .inputs,
+            )?)
+            .map_err(|error| Error::new("E_CONTRACT", error.to_string()))?,
+            inputs: read_example_json("examples/http-client/input.json")?,
+            input_ports: ports_as_json(
+                &read_example_document::<BlueprintDraft>(
+                    "examples/http-client/client.compose.json",
+                )?
+                .inputs,
+            )?,
             manifest: read_example_document("examples/http-client/client.app.json")?,
         },
     ];
     #[cfg(not(feature = "http-client"))]
-    let programs = vec![hello];
+    let mut programs = vec![hello];
+
+    if service.core1_memories.is_some() {
+        programs.push(core1_http_example(service)?);
+    }
 
     serde_json::to_value(WorkspaceResponse {
         kernel,
@@ -675,8 +702,160 @@ fn read_example_json(relative: &str) -> Result<Json> {
         .map_err(|error| Error::new("E_JSON", error.diagnostic.message).at(relative.to_owned()))
 }
 
+fn ports_as_json(ports: &[nexa::contracts::Port]) -> Result<Vec<Json>> {
+    ports
+        .iter()
+        .map(|port| {
+            serde_json::to_value(port).map_err(|error| Error::new("E_CONTRACT", error.to_string()))
+        })
+        .collect()
+}
+
+fn core1_http_example(service: &Service) -> Result<ProgramExample> {
+    let memories = service
+        .core1_memories
+        .as_ref()
+        .ok_or_else(|| Error::new("E_NOT_FOUND", "Core1 example memories have not been seeded"))?;
+    let digest = |name: &str| {
+        memories.get(name).ok_or_else(|| {
+            Error::new(
+                "E_NOT_FOUND",
+                format!("Core1 example memory is missing: {name}"),
+            )
+        })
+    };
+    let request_memory = core1::inspect(&service.store, digest("request")?)?;
+    let stream_memory = core1::inspect(&service.store, digest("response_stream")?)?;
+    let result_memory = core1::inspect(&service.store, digest("exchange_result")?)?;
+    let request = core1::blueprint::callable(&request_memory)?;
+    let stream = core1::blueprint::callable(&stream_memory)?;
+    let result = core1::blueprint::callable(&result_memory)?;
+
+    let mut input_ports = ports_as_core1_json(&request.parameters)?;
+    input_ports.extend(ports_as_core1_json(&stream.parameters)?);
+    let output = json!({"name":"result","type":result.result_type});
+    let entry = format!("{}.{}", result_memory.module, result.export_name);
+    let node = |id: &str, selector: &Digest, export: &nexa::value::Identifier| json!({"id":id,"selector":selector,"export":export});
+    let draft = json!({
+        "schema":"nexa.core1-blueprint-draft/0.1",
+        "language":"0.3",
+        "profile":"core1",
+        "entry":entry,
+        "inputs":input_ports,
+        "output":output,
+        "nodes":[
+            node("request", digest("request")?, &request.export_name),
+            node("response_stream", digest("response_stream")?, &stream.export_name),
+            node("exchange_result", digest("exchange_result")?, &result.export_name),
+        ],
+        "connections":[
+            {"from":{"kind":"input","port":"authority"},"to":{"kind":"node","node":"request","port":"authority"}},
+            {"from":{"kind":"input","port":"target"},"to":{"kind":"node","node":"request","port":"target"}},
+            {"from":{"kind":"input","port":"chunks"},"to":{"kind":"node","node":"response_stream","port":"chunks"}},
+            {"from":{"kind":"input","port":"eof"},"to":{"kind":"node","node":"response_stream","port":"eof"}},
+            {"from":{"kind":"node","node":"request","port":"result"},"to":{"kind":"node","node":"exchange_result","port":"encoded"}},
+            {"from":{"kind":"node","node":"response_stream","port":"result"},"to":{"kind":"node","node":"exchange_result","port":"decoded"}},
+            {"from":{"kind":"node","node":"exchange_result","port":"result"},"to":{"kind":"output","port":"result"}}
+        ],
+        "order_edges":[],
+        "settings":[],
+        "requirements":[]
+    });
+    let manifest = json!({
+        "schema":"nexa.application/0.3",
+        "principal":"app:core1-http",
+        "requests":[],
+        "policies":[]
+    });
+    Ok(ProgramExample {
+        id: "core1-http",
+        title: "Core1 HTTP proof",
+        description: "Compose request encoding, streamed response decoding, and exchange assembly as a typed Core1 graph.",
+        draft,
+        inputs: read_example_json("examples/native-http/input.json")?,
+        input_ports,
+        manifest: contracts::decode(manifest)?,
+    })
+}
+
+fn ports_as_core1_json(ports: &[core1::blueprint::Port]) -> Result<Vec<Json>> {
+    ports
+        .iter()
+        .map(|port| {
+            serde_json::to_value(port).map_err(|error| Error::new("E_CONTRACT", error.to_string()))
+        })
+        .collect()
+}
+
+fn core1_memory_views(
+    service: &Service,
+    source_bytes_total: &mut usize,
+) -> Result<Vec<MemoryView>> {
+    let Some(memories) = &service.core1_memories else {
+        return Ok(Vec::new());
+    };
+    memories
+        .iter()
+        .map(|(name, digest)| {
+            let memory = core1::inspect(&service.store, digest)?;
+            let bytes = core1::read_bounded(
+                &service.store.object_path(&memory.source),
+                core1::SOURCE_LIMIT,
+            )?;
+            memory.source.verify(&bytes)?;
+            if bytes.len() > MAX_SOURCE_BYTES_PER_MEMORY {
+                return Err(Error::new(
+                    "E_LIMIT",
+                    format!("Core1 memory {name} source exceeds the 64 KiB dashboard limit"),
+                ));
+            }
+            *source_bytes_total = (*source_bytes_total).saturating_add(bytes.len());
+            if *source_bytes_total > MAX_WORKSPACE_SOURCE_BYTES {
+                return Err(Error::new(
+                    "E_LIMIT",
+                    "workspace memory source exceeds the 4 MiB dashboard limit",
+                ));
+            }
+            let text = String::from_utf8(bytes)
+                .map_err(|error| Error::new("E_UTF8", error.to_string()))?;
+            let export = core1::blueprint::callable(&memory)?;
+            let exports = vec![
+                serde_json::to_value(export)
+                    .map_err(|error| Error::new("E_CONTRACT", error.to_string()))?,
+            ];
+            Ok(MemoryView {
+                digest: digest.clone(),
+                selector: digest.to_string(),
+                name: name.clone(),
+                version: "0.1".to_owned(),
+                kind: "source",
+                profile: Some("core1".to_owned()),
+                imports: Some(memory.imports),
+                exports,
+                source: vec![SourceView {
+                    path: format!("examples/native-http/{name}.nexa"),
+                    text,
+                }],
+                program: None,
+                evidence: Vec::new(),
+                program_evidence: Vec::new(),
+            })
+        })
+        .collect()
+}
+
 fn build(body: &[u8], service: &Service) -> Result<Json> {
-    let request: BuildRequest = decode_request(body)?;
+    let value = canonical::parse(body)?;
+    if is_core1_document(&value, "draft", "nexa.core1-blueprint-draft/0.1")? {
+        let request: Core1BuildRequest = decode_value(value)?;
+        let checked = core1::blueprint::compose(&service.store, request.draft)?;
+        return Ok(json!({
+            "program": checked.program(),
+            "subject": checked.subject(),
+            "inspection": inspect_core1_blueprint(&checked, service)?,
+        }));
+    }
+    let request: BuildRequest = decode_value(value)?;
     let requests = request
         .draft
         .nodes
@@ -695,7 +874,40 @@ fn build(body: &[u8], service: &Service) -> Result<Json> {
 }
 
 fn run_program(body: &[u8], service: &Service) -> Result<Json> {
-    let request: RunRequest = decode_request(body)?;
+    let value = canonical::parse(body)?;
+    if is_core1_document(&value, "program", "nexa.core1-program/0.1")? {
+        let mut request: Core1RunRequest = decode_value(value)?;
+        request.manifest.normalize()?;
+        if !request.allow.is_empty()
+            || !request.manifest.requests.is_empty()
+            || !request.manifest.policies.is_empty()
+        {
+            return Err(Error::new(
+                "E_UNSUPPORTED",
+                "Core1 HTTP proof is pure and accepts no grants, capability requests, or policies",
+            ));
+        }
+        let checked = core1::blueprint::load_checked(&service.store, request.program)?;
+        let subject = checked.subject().clone();
+        let value = checked.run(&request.input, core1::DEFAULT_FUEL)?;
+        let invocation_id = invocation_id();
+        let principal = request.manifest.principal;
+        return Ok(json!({
+            "stdout":"",
+            "exit_code":0,
+            "receipt":{
+                "schema":"nexa.core1-receipt/0.1",
+                "profile":"core1",
+                "program":subject,
+                "invocation_id":invocation_id,
+                "principal":principal,
+                "decisions":[],
+                "effects":[],
+                "outcome":{"kind":"Succeeded","value":value}
+            }
+        }));
+    }
+    let request: RunRequest = decode_value(value)?;
     if request.allow.len() > 32 || request.allow.iter().any(|resource| resource.len() > 2048) {
         return Err(Error::new(
             "E_LIMIT",
@@ -772,7 +984,14 @@ fn json_inputs(
 }
 
 fn seal_program(body: &[u8], service: &Service) -> Result<Json> {
-    let request: SealRequest = decode_request(body)?;
+    let value = canonical::parse(body)?;
+    if is_core1_document(&value, "program", "nexa.core1-program/0.1")? {
+        return Err(Error::new(
+            "E_UNSUPPORTED",
+            "Core1 programs cannot be sealed as memories in this profile yet",
+        ));
+    }
+    let request: SealRequest = decode_value(value)?;
     if request.name.len() > 128 || request.version.len() > 128 {
         return Err(Error::new(
             "E_LIMIT",
@@ -788,9 +1007,100 @@ fn seal_program(body: &[u8], service: &Service) -> Result<Json> {
     Ok(json!({"digest":digest}))
 }
 
-fn decode_request<T: serde::de::DeserializeOwned>(body: &[u8]) -> Result<T> {
-    let value = canonical::parse(body)?;
+fn decode_value<T: serde::de::DeserializeOwned>(value: Json) -> Result<T> {
     serde_json::from_value(value).map_err(|error| Error::new("E_JSON", error.to_string()))
+}
+
+fn is_core1_document(value: &Json, field: &str, expected_schema: &str) -> Result<bool> {
+    let document = value
+        .as_object()
+        .and_then(|object| object.get(field))
+        .and_then(Json::as_object)
+        .ok_or_else(|| Error::new("E_JSON", format!("request must contain a {field} object")))?;
+    let schema = document.get("schema").and_then(Json::as_str);
+    let profile = document.get("profile").and_then(Json::as_str);
+    if schema == Some(expected_schema) {
+        if profile != Some("core1") {
+            return Err(Error::new(
+                "E_PROFILE",
+                "Core1 blueprint documents must declare profile core1",
+            ));
+        }
+        return Ok(true);
+    }
+    if profile == Some("core1") {
+        return Err(Error::new(
+            "E_SCHEMA",
+            format!("profile core1 requires schema {expected_schema}"),
+        ));
+    }
+    Ok(false)
+}
+
+fn inspect_core1_blueprint(
+    checked: &core1::blueprint::CheckedProgram,
+    service: &Service,
+) -> Result<Json> {
+    let program = checked.program();
+    let nodes = program
+        .nodes
+        .iter()
+        .map(|node| {
+            let memory = core1::inspect(&service.store, &node.memory)?;
+            let contract = core1::blueprint::callable(&memory)?;
+            let source_path = service
+                .core1_memories
+                .as_ref()
+                .and_then(|memories| {
+                    memories
+                        .iter()
+                        .find_map(|(name, digest)| (digest == &node.memory).then_some(name))
+                })
+                .map_or_else(
+                    || node.memory.to_string(),
+                    |name| format!("examples/native-http/{name}.nexa"),
+                );
+            let source_reference = json!({
+                "memory": node.memory,
+                "path": source_path,
+                "blob": memory.source,
+                "module": memory.module,
+            });
+            Ok(json!({
+                "path":node.id,
+                "id":node.id,
+                "memory":node.memory,
+                "export":node.export,
+                "implementation":"source",
+                "contract":contract,
+                "source_references":[source_reference],
+                "source_span":null,
+                "child_count":0
+            }))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let inspection_limit = nodes.len();
+    Ok(json!({
+        "schema":"nexa.core1-program-inspection/0.1",
+        "profile":program.profile,
+        "subject":checked.subject(),
+        "module":program.entry.rsplit_once('.').map_or(program.entry.as_str(), |(module, _)| module),
+        "entry":program.entry,
+        "inputs":program.inputs,
+        "output":program.output,
+        "node_count":nodes.len(),
+        "nodes":nodes,
+        "connection_count":program.connections.len(),
+        "effects":[],
+        "required_bindings":[],
+        "capability_requirements":[],
+        "dependencies":program.dependencies,
+        "unresolved_requirements":[],
+        "offset":0,
+        "limit":inspection_limit,
+        "next_offset":null,
+        "has_more":false
+    }))
 }
 
 fn invocation_id() -> String {
@@ -818,7 +1128,7 @@ fn seed_examples(store: &Store) -> Result<()> {
     Ok(())
 }
 
-fn seed_core1_proof(store: &Store) -> Result<Digest> {
+fn seed_core1_memories(store: &Store) -> Result<BTreeMap<String, Digest>> {
     let seal = |name, source, imports: &[(&str, &Digest)]| {
         let imports = imports
             .iter()
@@ -846,47 +1156,24 @@ fn seed_core1_proof(store: &Store) -> Result<Digest> {
         include_str!("../../examples/native-http/response.nexa"),
         &[("headers", &headers)],
     )?;
-    seal(
-        "exchange.nexa",
-        include_str!("../../examples/native-http/exchange.nexa"),
-        &[("request", &request), ("response", &response)],
-    )
-}
-
-fn core1_subject(service: &Service) -> Result<&Digest> {
-    service.core1_proof.as_ref().ok_or_else(|| {
-        Error::new(
-            "E_NOT_FOUND",
-            "Start the local dashboard with --seed-examples to load the Core1 proof.",
-        )
-    })
-}
-
-fn core1_proof(service: &Service) -> Result<Json> {
-    let subject = core1_subject(service)?;
-    let memories = core1::inspect_closure(&service.store, subject)?;
-    let sources = memories
-        .iter()
-        .map(|(digest, memory)| {
-            let bytes = core1::read_bounded(
-                &service.store.object_path(&memory.source),
-                core1::SOURCE_LIMIT,
-            )?;
-            memory.source.verify(&bytes)?;
-            let text = String::from_utf8(bytes)
-                .map_err(|error| Error::new("E_UTF8", error.to_string()))?;
-            Ok((digest.clone(), text))
-        })
-        .collect::<Result<BTreeMap<_, _>>>()?;
-    let input = canonical::parse(include_bytes!("../../examples/native-http/input.json"))?;
-    Ok(json!({"subject": subject, "memories": memories, "sources": sources, "input": input}))
-}
-
-fn run_core1_proof(body: &[u8], service: &Service) -> Result<Json> {
-    let request: Core1RunRequest = decode_request(body)?;
-    let subject = core1_subject(service)?;
-    let value = core1::run(&service.store, subject, &request.input, core1::DEFAULT_FUEL)?;
-    Ok(json!({"subject": subject, "value": value}))
+    let response_stream = seal(
+        "response_stream.nexa",
+        include_str!("../../examples/native-http/response_stream.nexa"),
+        &[("response", &response)],
+    )?;
+    let exchange_result = seal(
+        "exchange_result.nexa",
+        include_str!("../../examples/native-http/exchange_result.nexa"),
+        &[("response", &response)],
+    )?;
+    Ok(BTreeMap::from([
+        ("decimal".to_owned(), decimal),
+        ("headers".to_owned(), headers),
+        ("request".to_owned(), request),
+        ("response".to_owned(), response),
+        ("response_stream".to_owned(), response_stream),
+        ("exchange_result".to_owned(), exchange_result),
+    ]))
 }
 
 fn static_file(path: &str, root: &Path) -> Option<(Vec<u8>, &'static str)> {
@@ -898,9 +1185,6 @@ fn static_file(path: &str, root: &Path) -> Option<(Vec<u8>, &'static str)> {
         "/graph.css" | "/dashboard/graph.css" => ("graph.css", "text/css; charset=utf-8"),
         "/app.js" | "/dashboard/app.js" => ("app.js", "text/javascript; charset=utf-8"),
         "/graph.js" | "/dashboard/graph.js" => ("graph.js", "text/javascript; charset=utf-8"),
-        "/core1-proof.js" | "/dashboard/core1-proof.js" => {
-            ("core1-proof.js", "text/javascript; charset=utf-8")
-        }
         _ => return None,
     };
     let path = root.join(name);

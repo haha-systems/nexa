@@ -282,39 +282,121 @@ fn json_body(response: &Response) -> Value {
 }
 
 #[test]
-fn dashboard_runs_the_sealed_core1_http_proof() {
+fn dashboard_builds_and_runs_core1_as_a_typed_blueprint() {
     let dashboard = Dashboard::start();
-    let response = dashboard.get("/api/core1/proof");
+    let response = dashboard.get("/api/workspace");
     assert_eq!(response.status, 200);
-    let proof = json_body(&response);
-    let subject = proof["subject"].as_str().unwrap();
-    let memories = proof["memories"].as_object().unwrap();
-    assert_eq!(memories.len(), 5);
-    assert_eq!(memories[subject]["profile"], "core1");
-    assert!(
-        proof["sources"][subject]
-            .as_str()
-            .unwrap()
-            .contains("import response")
-    );
-    for memory in memories.values() {
-        for target in memory["imports"].as_object().unwrap().values() {
-            assert!(memories.contains_key(target.as_str().unwrap()));
-        }
+    let workspace = json_body(&response);
+    let proof = workspace["programs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|program| program["id"] == "core1-http")
+        .expect("the proof is listed alongside the other blueprints");
+    let draft = &proof["draft"];
+    assert_eq!(draft["profile"], "core1");
+    let nodes = draft["nodes"].as_array().unwrap();
+    assert_eq!(nodes.len(), 3);
+    let memories = workspace["memories"].as_array().unwrap();
+    for node in nodes {
+        let memory = memories
+            .iter()
+            .find(|memory| memory["digest"] == node["selector"])
+            .unwrap();
+        assert_eq!(memory["profile"], "core1");
+        assert!(
+            memory["source"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("export fn")
+        );
+        assert_eq!(memory["exports"][0]["export_name"], node["export"]);
     }
 
-    let fixture =
-        nexa::canonical::parse(include_bytes!("../examples/native-http/input.json")).unwrap();
-    assert_eq!(proof["input"], fixture);
-    let (response, payload) = dashboard.json("/api/core1/run", &json!({ "input": fixture }));
-    assert_eq!(response.status, 200);
-    assert_eq!(payload["subject"], subject);
-    assert_eq!(payload["value"]["variant"], "complete");
-    assert_eq!(payload["value"]["fields"]["response"]["status"], "404");
+    let (response, built) = dashboard.json("/api/build", &json!({"draft": draft}));
+    assert_eq!(response.status, 200, "{built}");
+    assert_eq!(built["inspection"]["node_count"], 3);
+    assert_eq!(built["program"]["profile"], "core1");
     assert_eq!(
-        payload["value"]["fields"]["response"]["body"],
-        "00ff0d0a8041"
+        built["program"]["nodes"].as_array().unwrap().len(),
+        nodes.len()
     );
+    let mut reordered = draft.clone();
+    reordered["nodes"].as_array_mut().unwrap().reverse();
+    reordered["connections"].as_array_mut().unwrap().reverse();
+    let (response, rebuilt) = dashboard.json("/api/build", &json!({"draft": reordered}));
+    assert_eq!(response.status, 200, "{rebuilt}");
+    assert_eq!(built["subject"], rebuilt["subject"]);
+
+    let fixtures: Value =
+        serde_json::from_str(include_str!("../examples/native-http/fixtures.json")).unwrap();
+    for fixture in fixtures["cases"].as_array().unwrap() {
+        let request = json!({
+            "program": built["program"],
+            "input": fixture["input"],
+            "manifest": proof["manifest"],
+            "allow": []
+        });
+        let (response, payload) = dashboard.json("/api/run", &request);
+        assert_eq!(response.status, 200, "{}: {payload}", fixture["name"]);
+        assert_eq!(payload["receipt"]["program"], built["subject"]);
+        assert_eq!(payload["receipt"]["outcome"]["kind"], "Succeeded");
+        assert_eq!(payload["receipt"]["outcome"]["value"], fixture["expected"]);
+        assert_eq!(payload["receipt"]["effects"], json!([]));
+    }
+
+    // Both ports accept Bytes. Swapping them builds a different program
+    // and causes the original target bytes to fail authority validation.
+    let mut swapped = draft.clone();
+    for wire in swapped["connections"].as_array_mut().unwrap() {
+        if wire["from"]["kind"] == "input" {
+            match wire["from"]["port"].as_str() {
+                Some("authority") => wire["from"]["port"] = json!("target"),
+                Some("target") => wire["from"]["port"] = json!("authority"),
+                _ => {}
+            }
+        }
+    }
+    let (response, swapped) = dashboard.json("/api/build", &json!({"draft": swapped}));
+    assert_eq!(response.status, 200, "{swapped}");
+    assert_ne!(swapped["subject"], built["subject"]);
+    let (response, payload) = dashboard.json(
+        "/api/run",
+        &json!({
+            "program": swapped["program"],
+            "input": proof["inputs"],
+            "manifest": proof["manifest"],
+            "allow": []
+        }),
+    );
+    assert_eq!(response.status, 200, "{payload}");
+    assert_eq!(
+        payload["receipt"]["outcome"]["value"],
+        json!({"variant": "request_error", "fields": {"error": "invalid_authority"}})
+    );
+
+    let mut rewired = draft.clone();
+    let wires = rewired["connections"].as_array_mut().unwrap();
+    let from_authority = wires
+        .iter_mut()
+        .find(|wire| wire["from"]["kind"] == "input" && wire["from"]["port"] == "authority")
+        .unwrap();
+    from_authority["from"]["port"] = json!("chunks");
+    let (response, diagnostic) = dashboard.json("/api/build", &json!({"draft": rewired}));
+    assert_eq!(response.status, 400, "{diagnostic}");
+
+    let mut tampered = built["program"].clone();
+    tampered["connections"].as_array_mut().unwrap().pop();
+    let (response, diagnostic) = dashboard.json(
+        "/api/run",
+        &json!({
+            "program": tampered,
+            "input": proof["inputs"],
+            "manifest": proof["manifest"],
+            "allow": []
+        }),
+    );
+    assert_eq!(response.status, 400, "{diagnostic}");
 }
 
 #[test]
@@ -452,7 +534,6 @@ fn dashboard_seeds_builds_runs_seals_and_serves_static_assets() {
         ("/graph.css", "text/css"),
         ("/app.js", "text/javascript"),
         ("/graph.js", "text/javascript"),
-        ("/core1-proof.js", "text/javascript"),
     ] {
         let asset = dashboard.get(path);
         assert_eq!(asset.status, 200, "static asset {path} is served");

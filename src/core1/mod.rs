@@ -4,6 +4,8 @@ mod ast;
 mod engine;
 mod parser;
 
+pub mod blueprint;
+
 use crate::{
     canonical,
     contracts::WireDocument,

@@ -12,7 +12,9 @@ Build the standard Nexa binary with `cargo build --locked`. Run `nexa core1 --he
 | `core1 inspect DIGEST --closure` | Include checked records for the entire import graph. |
 | `core1 run DIGEST --input-file INPUT` | Evaluate the single exported function using typed JSON inputs. |
 
-The sealed record pins the implementation fingerprint, exact source bytes, and import map. Its `type_identity` identifies the namespace used by nominal types in inspected signatures. Sealing and loading recheck the source and exported signature. A dependent memory continues to use the same import digests after another implementation is sealed. Selecting a replacement means explicitly rebinding and resealing its dependents. Core1 uses the existing object store and a separate memory record format. It is currently driven by the Core1 CLI and pure source calls. Slice 0 blueprints and the dashboard use the Slice 0 contracts.
+The sealed record pins the implementation fingerprint, exact source bytes, and import map. Its `type_identity` identifies the namespace used by nominal types in inspected signatures. Sealing and loading recheck the source and exported signature. A dependent memory continues to use the same import digests after another implementation is sealed. Selecting a replacement means explicitly rebinding and resealing its dependents. Core1 uses the existing object store and a profile-specific memory record format.
+
+The dashboard also builds and runs pure Core1 blueprints. Each node selects an exact sealed memory and export. Wires must match the checked port types, including the identity of a nominal type's defining memory. The experimental Core1 draft and compiled program have separate format versions from Slice 0. [Dashboard guide](dashboard.md#run-the-core1-http-proof)
 
 Use an object keyed by parameter name for input. The signature determines how each JSON value is interpreted.
 
@@ -29,15 +31,15 @@ Types are nominal across memory boundaries. A type defined by one exact memory a
 
 Core1 supports checked signed arithmetic, records, unions, lists, local bindings, branches, exhaustive matches, and loops. Evaluation shares a fuel budget across the entry and all imported calls. `--fuel` selects the budget within the runner's limits. The profile's byte operations and data structures are general-purpose. The source memories implement the HTTP rules.
 
-The exchange imports the request encoder and response decoder. Both ultimately depend on the same decimal scanner.
+The blueprint connects the request encoder and stream decoder to the result assembler. The encoder and decoder's header parser share the same decimal scanner.
 
 ```mermaid
 graph TD
-    Exchange[Exchange] --> Request[Request encoder]
-    Exchange --> Response[Response decoder]
-    Response --> Headers[Header parser]
-    Request --> Decimal[Decimal scanner]
-    Headers --> Decimal
+    Input[Fixture input] --> Request[Request encoder]
+    Input --> Stream[Response stream decoder]
+    Request --> Result[Exchange result]
+    Stream --> Result
+    Result --> Output[Typed output]
 ```
 
 The [example](../examples/native-http/README.md) and [implementation plan](native-http-client-plan.md) describe the supported exchange and later raw networking milestones. The initial proof uses supplied byte chunks as input. Socket ownership, DNS, TLS, and the full method and framing matrix are later gates.

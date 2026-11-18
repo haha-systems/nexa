@@ -17,6 +17,112 @@ const savedBuiltProgram = workspaceFixture.memories.find((memory) => memory.prog
 const savedSubject = readJson('docs/validation/dashboard-hello-report.json').subject;
 assert.ok(savedBuiltProgram, 'the committed workspace fixture includes the actual saved Hello program');
 
+function core1WorkspaceFixture() {
+  const input = readJson('examples/native-http/input.json');
+  const requestDigest = `sha256:${'1'.repeat(64)}`;
+  const responseDigest = `sha256:${'2'.repeat(64)}`;
+  const streamDigest = `sha256:${'3'.repeat(64)}`;
+  const resultDigest = `sha256:${'4'.repeat(64)}`;
+  const responseType = `example.native_http.response.Response (${responseDigest})`;
+  const stepType = `example.native_http.response.Step (${responseDigest})`;
+  const exchangeType = `example.native_http.exchange_result.Exchange (${resultDigest})`;
+  const memory = (name, digest, imports, filename, exports) => ({
+    selector: digest,
+    digest,
+    name: `example.native_http.${name}`,
+    version: '0.3',
+    kind: 'source',
+    profile: 'core1',
+    imports,
+    exports,
+    source: [{ path: filename, text: readText(`examples/native-http/${filename}`) }],
+    program: null,
+    evidence: [],
+    program_evidence: [],
+  });
+  const memories = [
+    memory('request', requestDigest, {}, 'request.nexa', [{
+      export_name: 'encode', kind: 'function',
+      parameters: [{ name: 'authority', type: 'Bytes' }, { name: 'target', type: 'Bytes' }],
+      result_type: 'Result[Bytes, String]', effects: [], required_bindings: [], capability_requirements: [],
+    }]),
+    memory('response', responseDigest, {}, 'response.nexa', []),
+    memory('response_stream', streamDigest, { response: responseDigest }, 'response_stream.nexa', [{
+      export_name: 'decode', kind: 'function',
+      parameters: [{ name: 'chunks', type: 'List[Bytes]' }, { name: 'eof', type: 'Bool' }],
+      result_type: stepType, effects: [], required_bindings: [], capability_requirements: [],
+    }]),
+    memory('exchange_result', resultDigest, { response: responseDigest }, 'exchange_result.nexa', [{
+      export_name: 'assemble', kind: 'function',
+      parameters: [{ name: 'encoded', type: 'Result[Bytes, String]' }, { name: 'decoded', type: stepType }],
+      result_type: exchangeType, effects: [], required_bindings: [], capability_requirements: [],
+    }]),
+  ];
+  const connections = [
+    ['input', 'authority', 'request', 'authority'],
+    ['input', 'target', 'request', 'target'],
+    ['input', 'chunks', 'response_stream', 'chunks'],
+    ['input', 'eof', 'response_stream', 'eof'],
+  ].map(([fromKind, fromPort, toNode, toPort]) => ({
+    from: { kind: fromKind, port: fromPort },
+    to: { kind: 'node', node: toNode, port: toPort },
+  }));
+  connections.push(
+    { from: { kind: 'node', node: 'request', port: 'result' }, to: { kind: 'node', node: 'exchange_result', port: 'encoded' } },
+    { from: { kind: 'node', node: 'response_stream', port: 'result' }, to: { kind: 'node', node: 'exchange_result', port: 'decoded' } },
+    { from: { kind: 'node', node: 'exchange_result', port: 'result' }, to: { kind: 'output', port: 'result' } },
+  );
+  const draft = {
+    schema: 'nexa.core1-blueprint-draft/0.1',
+    language: '0.3',
+    profile: 'core1',
+    entry: 'example.native_http.exchange_result.assemble',
+    inputs: [
+      { name: 'authority', type: 'Bytes' },
+      { name: 'target', type: 'Bytes' },
+      { name: 'chunks', type: 'List[Bytes]' },
+      { name: 'eof', type: 'Bool' },
+    ],
+    output: { name: 'result', type: exchangeType },
+    nodes: [
+      { id: 'request', selector: requestDigest, export: 'encode' },
+      { id: 'response_stream', selector: streamDigest, export: 'decode' },
+      { id: 'exchange_result', selector: resultDigest, export: 'assemble' },
+    ],
+    connections,
+    order_edges: [],
+    settings: [],
+    requirements: [],
+  };
+  const program = {
+    id: 'core1-http',
+    title: 'Core1 HTTP proof',
+    description: 'Compose the pinned Core1 HTTP codec memories over fixture bytes.',
+    profile: 'core1',
+    draft,
+    input_ports: draft.inputs,
+    inputs: input,
+    manifest: { schema: 'nexa.application/0.3', principal: 'app:core1-http', requests: [], policies: [] },
+  };
+  const compiledProgram = {
+    schema: 'nexa.core1-program/0.1',
+    language: '0.3',
+    profile: 'core1',
+    entry: draft.entry,
+    inputs: draft.inputs,
+    output: draft.output,
+    nodes: draft.nodes.map((entry) => ({ id: entry.id, memory: entry.selector, export: entry.export })),
+    connections: draft.connections,
+    order_edges: [],
+  };
+  const workspace = {
+    ...workspaceFixture,
+    programs: [...workspaceFixture.programs, program],
+    memories: [...workspaceFixture.memories, ...memories],
+  };
+  return { workspace, program, draft, memories, compiledProgram, responseType, exchangeType };
+}
+
 let moduleCase = 0;
 
 function jsonResponse(value, status = 200) {
@@ -26,8 +132,8 @@ function jsonResponse(value, status = 200) {
   });
 }
 
-function installPage(fetchHandler) {
-  const dom = new Window({ url: 'http://nexa.test/' });
+function installPage(fetchHandler, url = 'http://nexa.test/') {
+  const dom = new Window({ url });
   dom.document.write(readText('dashboard/index.html'));
   dom.document.close();
 
@@ -61,8 +167,8 @@ function installPage(fetchHandler) {
   };
 }
 
-async function startApp(t, fetchHandler) {
-  const env = installPage(fetchHandler);
+async function startApp(t, fetchHandler, url) {
+  const env = installPage(fetchHandler, url);
   t.after(env.restore);
   await import(new URL(`../app.js?interaction=${++moduleCase}`, import.meta.url));
   await waitFor(() => document.querySelector('#topbar-status')?.textContent !== 'RUNTIME CONNECTING');
@@ -222,39 +328,136 @@ test('opening the saved Hello memory creates a resolved, example-seeded blueprin
   assert.equal(grant.checked, false, 'opening the saved program does not grant requested resources');
 });
 
-test('Core1 proof shows the pinned memories and sends the selected input to the runner', async (t) => {
+test('Core1 is an editable profile-filtered blueprint and runs through the shared playground', async (t) => {
+  const { workspace, program, draft, memories, compiledProgram, exchangeType } = core1WorkspaceFixture();
   const fixture = readJson('examples/native-http/fixtures.json').cases[0];
-  const source = readText('examples/native-http/exchange.nexa');
-  const proof = {
-    subject: 'proof',
-    input: fixture.input,
-    memories: {
-      proof: { module: 'example.native_http.exchange', imports: { request: 'encoder' }, signature: { name: 'exchange' } },
-      encoder: { module: 'example.native_http.request', imports: {}, signature: { name: 'encode' } },
-    },
-    sources: { proof: source, encoder: readText('examples/native-http/request.nexa') },
-  };
   const calls = [];
-  await startApp(t, async (path, init) => {
-    if (path === '/api/workspace') return jsonResponse(workspaceFixture);
-    if (path === '/api/core1/proof') return jsonResponse(proof);
-    if (path === '/api/core1/run') {
-      calls.push(JSON.parse(init.body));
-      return jsonResponse({ subject: proof.subject, value: fixture.expected });
+  const subject = `sha256:${'a'.repeat(64)}`;
+  const fetchMock = async (path, init = {}) => {
+    const url = String(path);
+    if (url === '/api/workspace') return jsonResponse(workspace);
+    if (url === '/api/build') {
+      const body = JSON.parse(init.body);
+      calls.push({ url, body });
+      assert.deepEqual(body, { draft }, 'the generic build route receives the editable Core1 blueprint draft');
+      return jsonResponse({
+        program: compiledProgram,
+        subject,
+        inspection: {
+          profile: 'core1', node_count: draft.nodes.length,
+          connection_count: draft.connections.length, inputs: draft.inputs, output: draft.output,
+        },
+      });
     }
-    throw new Error(`Unexpected dashboard request: ${path}`);
-  });
+    if (url === '/api/run') {
+      const body = JSON.parse(init.body);
+      calls.push({ url, body });
+      return jsonResponse({
+        stdout: '',
+        exit_code: 0,
+        receipt: {
+          schema: 'nexa.core1-receipt/0.1',
+          profile: 'core1',
+          program: subject,
+          invocation_id: 'core1-invocation-1',
+          principal: 'app:core1-http',
+          decisions: [],
+          effects: [],
+          outcome: { kind: 'Succeeded', value: fixture.expected },
+        },
+      });
+    }
+    if (url === './workspace-snapshot.json') return jsonResponse(workspace);
+    throw new Error(`Unexpected dashboard request: ${url}`);
+  };
+  const env = await startApp(t, fetchMock);
 
-  document.querySelector('[data-view="core1"]').click();
-  await waitFor(() => !document.querySelector('#core1-proof').hidden);
-  assert.equal(location.hash, '#core1');
-  assert.equal(document.querySelectorAll('.proof-node').length, 2);
-  document.querySelectorAll('.proof-node')[1].click();
-  assert.match(document.querySelector('#core1-memory').textContent, /example\.native_http\.request/);
-  assert.equal(document.querySelector('#core1-run').disabled, false);
-  document.querySelector('#core1-run').click();
-  await waitFor(() => document.querySelector('#core1-result-summary').textContent === 'HTTP 404 · 6 body bytes');
-  assert.deepEqual(calls, [{ input: fixture.input }]);
-  assert.match(document.querySelector('#core1-request').textContent, /^GET \/missing/);
-  assert.deepEqual(JSON.parse(document.querySelector('#core1-output').textContent), fixture.expected);
+  assert.equal(document.querySelector('[data-view="core1"]'), null, 'Core1 no longer has a separate navigation view');
+  assert.equal(document.querySelector('#view-core1'), null, 'the proof page is removed');
+  assert.equal(document.querySelector('#program-select').value, 'hello', 'Slice0 remains the default starting selection');
+  const selector = document.querySelector('#program-select');
+  selector.value = 'core1-http';
+  selector.dispatchEvent(new env.dom.Event('change', { bubbles: true }));
+
+  assert.equal(document.querySelector('#graph-program-name').textContent, 'Core1 HTTP proof');
+  assert.equal(document.querySelectorAll('#graph-container .nx-node-card').length, 3);
+  assert.equal(document.querySelectorAll('#graph-container .nx-node-unresolved').length, 0);
+  assert.equal(document.querySelectorAll('#graph-container .nx-wire.is-mismatch').length, 0,
+    'nominal port equality uses the full exact type strings');
+  const outputType = document.querySelector('#graph-container .nx-node-card[data-node-id="exchange_result"] .nx-port[data-port-direction="source"] .nx-port-type');
+  assert.equal(outputType.title, exchangeType, 'the full nominal type remains available to inspect');
+  assert.match(outputType.textContent, /…/, 'the graph shortens long nominal digests for display');
+  const addMemoryValues = [...document.querySelectorAll('#add-memory-select option')].map((option) => option.value);
+  assert.ok(memories.every((memory) => addMemoryValues.includes(memory.digest)), 'Core1 memories are available in its node picker');
+  assert.ok(!addMemoryValues.some((value) => workspaceFixture.memories.some((memory) => memory.digest === value)),
+    'Slice0 memories are filtered out of the Core1 node picker');
+
+  document.querySelector('#graph-container .nx-node-card[data-node-id="response_stream"]').click();
+  assert.match(document.querySelector('#selection-inspector').textContent, /PINNED IMPORTS/);
+  assert.ok(document.querySelector('#selection-inspector').textContent.includes(memories[1].digest),
+    'the graph inspector shows the exact pinned import digest');
+
+  document.querySelector('[data-view="memories"]').click();
+  const streamRow = [...document.querySelectorAll('#memory-list .memory-row')].find((row) =>
+    row.querySelector('.memory-row-name')?.textContent === 'example.native_http.response_stream');
+  assert.ok(streamRow, 'Core1 source memories appear in the shared memory catalog');
+  streamRow.click();
+  const importLink = document.querySelector('#memory-detail .memory-import-link');
+  assert.ok(importLink, 'the memory detail exposes imported memories as links');
+  assert.equal(importLink.title, memories[1].digest);
+  importLink.click();
+  assert.equal(document.querySelector('#memory-detail h2').textContent, 'example.native_http.response',
+    'a pinned import link opens the referenced memory');
+  assert.ok([...document.querySelectorAll('#memory-detail .source-block summary')].some((summary) => summary.textContent === 'response.nexa'));
+
+  document.querySelector('[data-view="blueprints"]').click();
+  const core1RequestMemory = memories[0];
+  document.querySelector('#add-memory-select').value = core1RequestMemory.digest;
+  document.querySelector('#add-memory-button').click();
+  assert.equal(document.querySelectorAll('#graph-container .nx-node-card').length, 4,
+    'the normal graph editor can add a pinned Core1 memory node');
+  document.querySelector('.nx-graph-delete-button').click();
+  assert.equal(document.querySelectorAll('#graph-container .nx-node-card').length, 3,
+    'the normal graph editor can remove that node');
+
+  assert.equal(document.querySelector('#seal-panel').hidden, true, 'Core1 has no unsupported seal action');
+  document.querySelector('[data-view="playground"]').click();
+  assert.deepEqual(JSON.parse(document.querySelector('#input-json').value), program.inputs,
+    'the checked-in Core1 example input loads in the shared playground');
+  assert.equal(document.querySelector('#manifest-card').hidden, true);
+  assert.equal(document.querySelector('#grant-card').hidden, true);
+  assert.equal(document.querySelector('#playground-build').disabled, false, 'Core1 keeps the shared Build control visible');
+  assert.equal(document.querySelector('#run-program').disabled, false, 'Run uses the shared build-then-invoke flow');
+
+  document.querySelector('#playground-build').click();
+  await waitFor(() => document.querySelector('#build-state').textContent === 'BUILT');
+  assert.equal(document.querySelector('#run-program').disabled, false);
+  document.querySelector('#run-program').click();
+  await waitFor(() => document.querySelector('#receipt-state').textContent === 'SUCCEEDED');
+  assert.equal(calls.filter((call) => call.url === '/api/build').length, 1);
+  assert.deepEqual(calls.find((call) => call.url === '/api/run').body, {
+    program: compiledProgram,
+    input: fixture.input,
+    manifest: program.manifest,
+    allow: [],
+  }, 'Core1 uses the shared runner with empty manifest and grant data');
+  assert.deepEqual(JSON.parse(document.querySelector('#stdout-output').textContent), fixture.expected,
+    'the typed Core1 return value is the primary receipt output');
+  assert.match(document.querySelector('#receipt-meta').textContent, /HTTP 404 · 6 body bytes/);
+  const requestDetail = [...document.querySelectorAll('#receipt-meta details')].find((details) => details.textContent.includes('ENCODED GET REQUEST'));
+  assert.ok(requestDetail);
+  assert.match(requestDetail.textContent, /GET \/missing\?x=%2F HTTP\/1\.1/);
+});
+
+test('legacy #core1 deep links open the Blueprint view and select the Core1 program', async (t) => {
+  const { workspace } = core1WorkspaceFixture();
+  await startApp(t, async (path) => {
+    if (String(path) === '/api/workspace') return jsonResponse(workspace);
+    if (String(path) === './workspace-snapshot.json') return jsonResponse(workspace);
+    throw new Error(`Unexpected dashboard request: ${String(path)}`);
+  }, 'http://nexa.test/#core1');
+
+  assert.equal(document.querySelector('#view-blueprints').hidden, false);
+  assert.equal(document.querySelector('#program-select').value, 'core1-http');
+  assert.equal(location.hash, '#blueprints');
 });

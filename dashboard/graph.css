@@ -454,6 +454,14 @@
   color: #ffd08b;
 }
 
+.nx-port-type.type-other {
+  max-width: 120px;
+  overflow: hidden;
+  color: #a7c0ff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .nx-port-type.type-unknown {
   color: #f5a78e;
 }

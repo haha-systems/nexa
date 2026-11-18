@@ -8,7 +8,9 @@ This example encodes a GET request and decodes a response from caller-provided b
 | `headers.nexa` | Header field parsing and framing classification | `decimal` |
 | `request.nexa` | GET request encoding | `decimal` |
 | `response.nexa` | Incremental response decoding | `headers` |
-| `exchange.nexa` | Request encoding and fixture-driven response decoding | `request`, `response` |
+| `response_stream.nexa` | Feed the decoder a list of byte chunks | `response` |
+| `exchange_result.nexa` | Combine the request and response results | `response` |
+| `exchange.nexa` | CLI entry that calls the same codec memories | `request`, `stream`, `result` |
 
 The encoder accepts a dotted-decimal IPv4 address with an optional port from 1 to 65535. Octets and port use canonical decimal spelling. The target is an ASCII origin-form path with an optional query, up to 4,096 bytes, with valid percent escapes. The encoder preserves the supplied authority and target bytes and emits `Host` and `Connection: close` fields.
 
@@ -18,7 +20,7 @@ The response decoder expects `State.start()` on the first call and the `needs_mo
 
 ## Run in the dashboard
 
-The local dashboard can seal and run this example. Open its **Core1 HTTP proof** view to inspect each memory and run the sample. [Dashboard commands](../../docs/dashboard.md#run-the-core1-http-proof)
+Select **Core1 HTTP proof** in **Blueprints**. Build the typed graph, then run the sample in **Playground**. The graph exposes the request encoder, stream decoder, and result assembler as editable nodes. [Dashboard commands](../../docs/dashboard.md#run-the-core1-http-proof)
 
 ## Run from the CLI
 
@@ -30,12 +32,14 @@ nexa=./target/debug/nexa
 example=examples/native-http
 
 seal_exchange() {
-  local decimal_digest headers_digest request_digest response_digest
+  local decimal_digest headers_digest request_digest response_digest stream_digest result_digest
   decimal_digest=$("$nexa" core1 seal "$example/$1") || return
   headers_digest=$("$nexa" core1 seal "$example/headers.nexa" --import "decimal=$decimal_digest") || return
   request_digest=$("$nexa" core1 seal "$example/request.nexa" --import "decimal=$decimal_digest") || return
   response_digest=$("$nexa" core1 seal "$example/response.nexa" --import "headers=$headers_digest") || return
-  "$nexa" core1 seal "$example/exchange.nexa" --import "request=$request_digest" --import "response=$response_digest"
+  stream_digest=$("$nexa" core1 seal "$example/response_stream.nexa" --import "response=$response_digest") || return
+  result_digest=$("$nexa" core1 seal "$example/exchange_result.nexa" --import "response=$response_digest") || return
+  "$nexa" core1 seal "$example/exchange.nexa" --import "request=$request_digest" --import "stream=$stream_digest" --import "result=$result_digest"
 }
 
 exchange_digest=$(seal_exchange decimal.nexa)

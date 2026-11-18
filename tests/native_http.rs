@@ -20,10 +20,16 @@ fn assemble(store: &Store, decimal_name: &str) -> Digest {
     let headers = seal(store, "headers", &[("decimal", &decimal)]);
     let request = seal(store, "request", &[("decimal", &decimal)]);
     let response = seal(store, "response", &[("headers", &headers)]);
+    let stream = seal(store, "response_stream", &[("response", &response)]);
+    let result = seal(store, "exchange_result", &[("response", &response)]);
     seal(
         store,
         "exchange",
-        &[("request", &request), ("response", &response)],
+        &[
+            ("request", &request),
+            ("stream", &stream),
+            ("result", &result),
+        ],
     )
 }
 
@@ -46,10 +52,10 @@ fn exchange_composes_locked_codecs_and_preserves_binary_response_at_every_split(
     let store = Store::open(directory.path()).unwrap();
     let digest = assemble(&store, "decimal");
     let records = core1::inspect_closure(&store, &digest).unwrap();
-    assert_eq!(records.len(), 5);
+    assert_eq!(records.len(), 7);
     assert_eq!(
         records[&digest].imports.keys().collect::<Vec<_>>(),
-        ["request", "response"]
+        ["request", "result", "stream"]
     );
 
     let message = b"HTTP/1.1 404 Not Found\r\nContent-Length: 4\r\nX-Test: one\r\nX-Test: two\r\n\r\n\x00\xff\r\nrest";

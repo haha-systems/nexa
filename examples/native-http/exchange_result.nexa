@@ -1,0 +1,30 @@
+nexa 0.3
+module example.native_http.exchange_result
+
+import response
+
+export type Exchange is complete(request is Bytes, response is response.Response, remainder is Bytes) |
+  request_error(error is String) |
+  response_error(request is Bytes, error is String) |
+  needs_more(request is Bytes)
+
+export fn assemble(encoded is Result[Bytes, String], decoded is response.Step) -> Exchange {
+  match encoded {
+    Result.err(error: error) => {
+      return Exchange.request_error(error: error)
+    }
+    Result.ok(value: wire) => {
+      match decoded {
+        response.Step.needs_more(next: _next) => {
+          return Exchange.needs_more(request: wire)
+        }
+        response.Step.malformed(error: error) => {
+          return Exchange.response_error(request: wire, error: error)
+        }
+        response.Step.complete(value: value, remainder: remainder) => {
+          return Exchange.complete(request: wire, response: value, remainder: remainder)
+        }
+      }
+    }
+  }
+}

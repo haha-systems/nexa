@@ -6,6 +6,15 @@ use super::{
 const MAX_DEPTH: usize = 128;
 
 pub(super) fn evaluate(module: &CheckedModule, args: &Json, fuel: u64) -> Result<Json> {
+    let mut budget = Budget::new(fuel);
+    evaluate_with_budget(module, args, &mut budget)
+}
+
+pub(super) fn evaluate_with_budget(
+    module: &CheckedModule,
+    args: &Json,
+    budget: &mut Budget,
+) -> Result<Json> {
     let params = &module.signature.params;
     let args = args
         .as_object()
@@ -17,16 +26,14 @@ pub(super) fn evaluate(module: &CheckedModule, args: &Json, fuel: u64) -> Result
         ));
     }
 
-    let mut runtime = Runtime {
-        budget: Budget::new(fuel),
-    };
+    let mut runtime = Runtime { budget };
     runtime.budget.storage::<Value>(params.len())?;
     let mut decoded = Vec::with_capacity(params.len());
     for param in params {
         let arg = args.get(&param.name).ok_or_else(|| {
             Error::new("E_CORE1_VALUE", format!("missing parameter {}", param.name))
         })?;
-        let value = value::decode(&param.ty, arg, &module.catalog, &mut runtime.budget, 0)
+        let value = value::decode(&param.ty, arg, &module.catalog, runtime.budget, 0)
             .map_err(|error| error.at(param.name.clone()))?;
         decoded.push(value);
     }
@@ -35,16 +42,16 @@ pub(super) fn evaluate(module: &CheckedModule, args: &Json, fuel: u64) -> Result
         &module.signature.result,
         &result,
         &module.catalog,
-        &mut runtime.budget,
+        runtime.budget,
         0,
     )
 }
 
-struct Runtime {
-    budget: Budget,
+struct Runtime<'a> {
+    budget: &'a mut Budget,
 }
 
-impl Runtime {
+impl Runtime<'_> {
     fn function(
         &mut self,
         module: &CheckedModule,
@@ -254,7 +261,7 @@ impl Runtime {
         use ast::Binary::*;
         match (operator, &left, &right) {
             (Equal | NotEqual, left, right) => {
-                let equal = value::equal(left, right, &mut self.budget)?;
+                let equal = value::equal(left, right, self.budget)?;
                 Ok(Value::Bool(if matches!(operator, Equal) {
                     equal
                 } else {
@@ -316,7 +323,7 @@ impl Runtime {
             }
             (BytesHex, [Value::String(hex)]) => {
                 self.budget.storage::<Vec<u8>>(1)?;
-                let bytes = value::from_hex(hex, &mut self.budget)?;
+                let bytes = value::from_hex(hex, self.budget)?;
                 Ok(Value::Bytes(Arc::new(bytes)))
             }
             (EncodeUtf8, [Value::String(text)]) => self.copy_bytes(text.as_bytes()),

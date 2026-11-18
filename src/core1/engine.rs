@@ -9,7 +9,7 @@ use crate::{
     diagnostic::{Error, Result},
     digest::Digest,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use std::{collections::BTreeMap, fmt, sync::Arc};
 
@@ -32,9 +32,35 @@ impl CheckedModule {
     pub fn evaluate(&self, args: &Json, fuel: u64) -> Result<Json> {
         run::evaluate(self, args, fuel)
     }
+
+    pub(super) fn evaluate_with_budget(
+        &self,
+        args: &Json,
+        budget: &mut EvaluationBudget,
+    ) -> Result<Json> {
+        run::evaluate_with_budget(self, args, &mut budget.0)
+    }
+
+    pub(super) fn ports(&self) -> (String, Vec<(String, String)>, String) {
+        self.signature.ports()
+    }
 }
 
-#[derive(Debug, Serialize)]
+/// One allocation and fuel budget shared by every Core1 node in a blueprint.
+pub(super) struct EvaluationBudget(value::Budget);
+
+impl EvaluationBudget {
+    pub(super) fn new(fuel: u64) -> Self {
+        Self(value::Budget::new(fuel))
+    }
+
+    pub(super) fn charge_copy(&mut self, bytes: usize) -> Result<()> {
+        self.0.work(bytes)?;
+        self.0.storage::<u8>(bytes)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Signature {
     name: String,
     params: Vec<Field>,
@@ -42,7 +68,20 @@ pub struct Signature {
     types: BTreeMap<String, TypeShape>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+impl Signature {
+    pub(super) fn ports(&self) -> (String, Vec<(String, String)>, String) {
+        (
+            self.name.clone(),
+            self.params
+                .iter()
+                .map(|param| (param.name.clone(), param.ty.to_string()))
+                .collect(),
+            self.result.to_string(),
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 enum Type {
     Unit,
@@ -114,27 +153,27 @@ impl fmt::Display for Type {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Nominal {
     module: String,
     identity: Digest,
     name: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Field {
     name: String,
     ty: Type,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind")]
 enum TypeShape {
     Record { fields: Vec<Field> },
     Union { variants: Vec<Variant> },
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Variant {
     name: String,
     fields: Vec<Field>,

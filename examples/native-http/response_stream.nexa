@@ -1,0 +1,31 @@
+nexa 0.3
+module example.native_http.response_stream
+
+import response
+
+export fn decode(chunks is List[Bytes], eof is Bool) -> response.Step {
+  let count = list.len(chunks)
+  var cursor = 0
+  var progress = response.State.start()
+  while cursor < count {
+    let chunk = list.get(chunks, cursor)
+    cursor = cursor + 1
+    match response.decode(progress, chunk, false) {
+      response.Step.needs_more(next: next) => {
+        progress = next
+      }
+      response.Step.malformed(error: error) => {
+        return response.Step.malformed(error: error)
+      }
+      response.Step.complete(value: value, remainder: remainder) => {
+        var unread = remainder
+        while cursor < count {
+          unread = bytes.concat(unread, list.get(chunks, cursor))
+          cursor = cursor + 1
+        }
+        return response.Step.complete(value: value, remainder: unread)
+      }
+    }
+  }
+  return response.decode(progress, hex"", eof)
+}
